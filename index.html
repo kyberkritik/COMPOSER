@@ -76,6 +76,14 @@
       outline: none;
     }
 
+    .piece.feature {
+      grid-column: 1 / -1;
+      min-height: 220px;
+      background:
+        radial-gradient(ellipse at 88% 120%, #16314d99 0, transparent 22rem),
+        rgba(17, 18, 15, .78);
+    }
+
     .piece::after {
       position: absolute;
       right: 25px;
@@ -134,7 +142,7 @@
 </head>
 <body>
   <main>
-    <div class="eyebrow">Archivo sonoro · 02 obras</div>
+    <div class="eyebrow">Archivo sonoro · 03 obras · un linaje</div>
     <h1>Composiciones</h1>
 
     <nav class="grid" aria-label="Seleccionar composición">
@@ -142,7 +150,7 @@
         <span class="number">01</span>
         <span class="piece-copy">
           <h2>Air on the G String</h2>
-          <span class="meta">J. S. Bach · Arreglo y reproductor</span>
+          <span class="meta">J. S. Bach · La raíz · Arreglo y reproductor</span>
         </span>
       </a>
 
@@ -150,12 +158,20 @@
         <span class="number">02</span>
         <span class="piece-copy">
           <h2>The Mushroom at the End of the World</h2>
-          <span class="meta">Obra original · Guitarra clásica · Do menor</span>
+          <span class="meta">Codex, sobre Bach · Guitarra clásica + violonchelo · Do menor</span>
+        </span>
+      </a>
+
+      <a class="piece feature" href="output/the-cartographer-of-rain/">
+        <span class="number">03</span>
+        <span class="piece-copy">
+          <h2>The Cartographer of Rain</h2>
+          <span class="meta">Claude, sobre Bach y Codex · Guitarra + violonchelo + celesta · Re menor → Re mayor</span>
         </span>
       </a>
     </nav>
 
-    <footer>Selecciona una obra para abrir su reproductor</footer>
+    <footer>Un mismo Aire, tres manos · Selecciona una obra para abrir su reproductor</footer>
   </main>
 </body>
 </html>

@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Cartographer of Rain</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --void: #070a12;
+      --slate: #0e1422;
+      --paper: #e7ecf6;
+      --muted: #8b93a7;
+      --rain: #8fd0ff;
+      --melody: #aee1ff;
+      --inner: #74829e;
+      --bass: #4f7da6;
+      --cello: #ff9e8a;
+      --celesta: #ffd86b;
+      --line: #232c3e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--paper);
+      background:
+        radial-gradient(ellipse at 80% -10%, #16314d 0, transparent 36rem),
+        radial-gradient(ellipse at 5% 80%, #1a1430 0, transparent 34rem),
+        linear-gradient(160deg, var(--void), #0a0f1b 55%, #06080f);
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0; pointer-events: none; opacity: .5; z-index: 0;
+      background-image:
+        repeating-linear-gradient(78deg, transparent 0 13px, #9fd2ff10 13px 14px),
+        repeating-linear-gradient(78deg, transparent 0 27px, #9fd2ff0a 27px 28px);
+      mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+    }
+    main { position: relative; z-index: 1; width: min(1120px, calc(100% - 34px)); margin: 0 auto; padding: 44px 0 54px; }
+    .masthead { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 30px; min-height: 360px; border-bottom: 1px solid var(--line); padding-bottom: 26px; }
+    .kicker { color: var(--rain); font-size: .7rem; letter-spacing: .22em; text-transform: uppercase; }
+    .crumb { color: var(--muted); }
+    .crumb a { color: var(--muted); text-decoration: none; border-bottom: 1px solid #ffffff22; }
+    .crumb a:hover { color: var(--paper); }
+    h1 {
+      max-width: 760px; margin: 20px 0 18px;
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: clamp(3rem, 8vw, 7rem); font-weight: 400; line-height: .85; letter-spacing: -.06em;
+    }
+    .deck { width: min(600px, 100%); color: var(--muted); font-family: Georgia, serif; font-size: 1.07rem; font-style: italic; line-height: 1.6; }
+    .map { position: relative; align-self: stretch; min-height: 320px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: #080d18; }
+    .map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .contour { fill: none; stroke: #2f5d86; stroke-width: 1; opacity: .55; }
+    .contour.warm { stroke: #6b4f76; }
+    .pin { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--rain); box-shadow: 0 0 12px var(--rain); }
+    .drop {
+      position: absolute; width: 1px; height: 16px; top: -20px;
+      background: linear-gradient(180deg, transparent, #bfe3ff); opacity: .65;
+      animation: fall linear infinite;
+    }
+    @keyframes fall { to { transform: translateY(360px); opacity: 0; } }
+
+    .player { margin-top: 27px; border: 1px solid var(--line); background: #0b1120ee; box-shadow: 0 30px 80px #0009; border-radius: 3px; }
+    .transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 22px; }
+    .buttons { display: flex; gap: 9px; }
+    button { border: 0; font: inherit; cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--rain); outline-offset: 3px; }
+    #play { width: 62px; height: 62px; border-radius: 50%; color: #04121f; background: var(--rain); font-size: 1.25rem; font-weight: 800; }
+    #stop { width: 39px; height: 39px; align-self: center; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); background: transparent; }
+    .position { min-width: 0; }
+    .position-head { display: flex; justify-content: space-between; gap: 18px; margin-bottom: 11px; color: var(--muted); font-size: .75rem; }
+    #measure { color: var(--paper); }
+    input[type="range"] { width: 100%; accent-color: var(--rain); cursor: pointer; }
+    .tempo { display: grid; grid-template-columns: auto auto; gap: 6px 13px; align-items: center; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .tempo output { justify-self: end; color: var(--paper); font-size: .85rem; letter-spacing: 0; }
+    #tempo { grid-column: 1 / -1; width: 140px; }
+    .score-view { position: relative; height: 190px; border-top: 1px solid var(--line); background: #060a12; overflow: hidden; }
+    #score-canvas { display: block; width: 100%; height: 100%; }
+    .section-tag { position: absolute; top: 14px; left: 17px; padding: 5px 8px; color: #04121f; background: var(--rain); font-size: .66rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 22px 20px; border-top: 1px solid var(--line); }
+    .voice-toggle {
+      display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px;
+      border: 1px solid var(--line); border-radius: 999px; background: transparent;
+      color: var(--paper); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+      transition: border-color .18s ease, opacity .18s ease, background .18s ease;
+    }
+    .voice-toggle:hover { border-color: var(--rain); }
+    .voice-toggle .swatch { width: 11px; height: 11px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+    .voice-toggle[aria-pressed="true"] { opacity: .34; background: #ffffff08; }
+    .voice-toggle[aria-pressed="true"] .swatch { box-shadow: none; opacity: .5; }
+
+    .meta-grid { display: grid; grid-template-columns: 1.3fr .7fr; gap: 42px; padding: 29px 0 10px; }
+    .program-note { color: var(--muted); font-family: Georgia, serif; font-size: 1rem; line-height: 1.72; }
+    .program-note strong { color: var(--paper); font-weight: 400; }
+    .downloads { display: grid; gap: 9px; align-content: start; }
+    .download { display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--line); color: var(--paper); text-decoration: none; font-size: .8rem; }
+    .download span { color: var(--muted); }
+    .status { color: var(--rain); font-size: .72rem; min-height: 1.4em; }
+    @media (max-width: 760px) {
+      .masthead { grid-template-columns: 1fr; }
+      .map { min-height: 240px; }
+      .transport { grid-template-columns: 1fr; }
+      .buttons { justify-content: center; }
+      .tempo { grid-template-columns: auto 1fr auto; }
+      #tempo { grid-column: auto; width: 100%; }
+      .meta-grid { grid-template-columns: 1fr; gap: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <div>
+        <div class="kicker">A new work by Claude · D minor → D major · 4/4</div>
+        <p class="crumb"><a href="../../index.html">← Composiciones</a> · in the lineage of Bach's Air</p>
+        <h1>The Cartographer of Rain</h1>
+        <p class="deck">A trio that maps the same weather Bach drew and Codex's mushroom survived: classical guitar traces the terrain, a cello sings the long contour lines, and a celesta falls through it all as rain — until the last bar, the storm clears into D major.</p>
+      </div>
+      <div class="map" aria-hidden="true">
+        <svg viewBox="0 0 320 320" preserveAspectRatio="none">
+          <path class="contour" d="M-10 60 C 70 30, 150 90, 230 50 S 360 80, 340 60"/>
+          <path class="contour" d="M-10 110 C 80 80, 140 150, 220 110 S 360 140, 340 120"/>
+          <path class="contour warm" d="M-10 165 C 60 140, 160 210, 240 165 S 360 190, 340 175"/>
+          <path class="contour" d="M-10 220 C 90 190, 150 255, 230 215 S 360 245, 340 230"/>
+          <path class="contour warm" d="M-10 275 C 70 250, 160 300, 250 265 S 360 295, 340 285"/>
+        </svg>
+        <i class="pin" style="left:24%;top:34%"></i>
+        <i class="pin" style="left:67%;top:52%;background:var(--cello);box-shadow:0 0 12px var(--cello)"></i>
+        <i class="pin" style="left:48%;top:72%;background:var(--celesta);box-shadow:0 0 12px var(--celesta)"></i>
+      </div>
+    </header>
+
+    <section class="player" aria-label="Composition player">
+      <div class="transport">
+        <div class="buttons">
+          <button id="play" aria-label="Play">▶</button>
+          <button id="stop" aria-label="Stop">■</button>
+        </div>
+        <div class="position">
+          <div class="position-head"><span id="measure">Measure 1 · A · The falling</span><span id="clock">0:00 / 2:08</span></div>
+          <input id="seek" type="range" min="0" max="128" step="0.125" value="0" aria-label="Playback position">
+        </div>
+        <label class="tempo" for="tempo">Tempo <output id="tempo-value">60 BPM</output><input id="tempo" type="range" min="42" max="84" value="60"></label>
+      </div>
+      <div class="score-view">
+        <span id="section-tag" class="section-tag">A · The falling</span>
+        <canvas id="score-canvas" aria-label="Pitch map of the composition"></canvas>
+      </div>
+      <div class="legend" role="group" aria-label="Instrument voices — toggle to mute">
+        <button class="voice-toggle" data-voice="melody"><span class="swatch" style="--c:#aee1ff"></span>Guitar · melody</button>
+        <button class="voice-toggle" data-voice="inner"><span class="swatch" style="--c:#74829e"></span>Guitar · inner</button>
+        <button class="voice-toggle" data-voice="bass"><span class="swatch" style="--c:#4f7da6"></span>Guitar · bass</button>
+        <button class="voice-toggle" data-voice="cello"><span class="swatch" style="--c:#ff9e8a"></span>Cello · counter-voice</button>
+        <button class="voice-toggle" data-voice="celesta"><span class="swatch" style="--c:#ffd86b"></span>Celesta · rain</button>
+      </div>
+    </section>
+
+    <section class="meta-grid">
+      <div class="program-note">
+        <p><strong>The idea:</strong> Bach's Air sustains a singing line over a walking bass; Codex grew a chromatic mushroom from that soil. I wanted to keep the lineage but step into the open air — so this piece is set in <strong>D minor opening to D major</strong>, Bach's own key for the Air, and it is a real trio rather than one instrument.</p>
+        <p><strong>The other voice &amp; instrument:</strong> the guitar holds melody, inner harmony and a descending lament bass; the <strong>cello</strong> answers with long contour lines that cross above and below it; and the <strong>celesta</strong> is the rain — sparse, bright drops that fall only where the map needs a landmark. Mute any voice in the legend to hear the others alone.</p>
+        <p>Form is a baroque binary (A repeated, B repeated). Section A keeps falling; Section B lifts the same harmonies until the final bar resolves to D major and the rain stops. <span id="status" class="status" role="status"></span></p>
+      </div>
+      <nav class="downloads" aria-label="Downloads">
+        <a class="download" href="the-cartographer-of-rain.mid" download>MIDI <span>performance</span></a>
+        <a class="download" href="the-cartographer-of-rain.musicxml" download>MusicXML <span>editable score</span></a>
+        <a class="download" href="composition.json" download>Composition data <span>JSON</span></a>
+      </nav>
+    </section>
+  </main>
+
+  <script src="composition-data.js"></script>
+  <script>
+    (() => {
+      const piece = window.COMPOSITION;
+      const $ = sel => document.querySelector(sel);
+      const playButton = $('#play'), stopButton = $('#stop'), seek = $('#seek');
+      const tempoControl = $('#tempo'), tempoValue = $('#tempo-value');
+      const measureLabel = $('#measure'), clock = $('#clock'), status = $('#status');
+      const sectionTag = $('#section-tag'), canvas = $('#score-canvas');
+      const totalBeats = piece.playbackMeasures * piece.beatsPerMeasure;
+      const colors = { melody: '#aee1ff', inner: '#74829e', bass: '#4f7da6', cello: '#ff9e8a', celesta: '#ffd86b' };
+      let context = null, convolver = null, playing = false;
+      let positionBeat = 0, anchorBeat = 0, anchorTime = 0, eventIndex = 0;
+      let scheduler = null, frame = null, sources = [];
+      const muted = new Set();
+
+      const tempo = () => Number(tempoControl.value);
+      const secondsAt = beat => beat * 60 / tempo();
+      const format = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+      function makeRoom() {
+        const rate = context.sampleRate, length = rate * 2.6;
+        const impulse = context.createBuffer(2, length, rate);
+        for (let ch = 0; ch < 2; ch++) {
+          const data = impulse.getChannelData(ch);
+          for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3.4) * .3;
+        }
+        convolver = context.createConvolver();
+        convolver.buffer = impulse;
+        const wet = context.createGain();
+        wet.gain.value = .2;
+        convolver.connect(wet).connect(context.destination);
+      }
+
+      const freqOf = m => 440 * Math.pow(2, (m - 69) / 12);
+
+      function pluck(event, when) {
+        const f = freqOf(event.midi);
+        const env = context.createGain(), filter = context.createBiquadFilter();
+        const level = (event.velocity / 127) * .17;
+        const tail = Math.min(3.0, Math.max(.7, event.duration * 60 / tempo() + 1.0));
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(Math.min(5600, f * 9), when);
+        filter.frequency.exponentialRampToValueAtTime(Math.max(650, f * 2.2), when + tail);
+        env.gain.setValueAtTime(.0001, when);
+        env.gain.exponentialRampToValueAtTime(level, when + .009);
+        env.gain.exponentialRampToValueAtTime(.0001, when + tail);
+        filter.connect(env); env.connect(context.destination); env.connect(convolver);
+        [[1, 'triangle', 1], [2.005, 'sine', .16], [3.01, 'sine', .045]].forEach(([ratio, type, g]) => {
+          const o = context.createOscillator(), gain = context.createGain();
+          o.type = type; o.frequency.setValueAtTime(f * ratio, when);
+          gain.gain.value = g; o.connect(gain).connect(filter);
+          o.start(when); o.stop(when + tail + .05); sources.push(o);
+        });
+      }
+
+      function bow(event, when) {
+        const f = freqOf(event.midi);
+        const dur = Math.max(.5, event.duration * 60 / tempo());
+        const env = context.createGain(), filter = context.createBiquadFilter();
+        const level = (event.velocity / 127) * .15;
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(Math.min(3000, f * 5), when);
+        filter.frequency.linearRampToValueAtTime(Math.min(4200, f * 6.5), when + dur * .4);
+        env.gain.setValueAtTime(.0001, when);
+        env.gain.exponentialRampToValueAtTime(level, when + Math.min(.24, dur * .3));
+        env.gain.setValueAtTime(level, when + dur * .72);
+        env.gain.exponentialRampToValueAtTime(.0001, when + dur + .2);
+        filter.connect(env); env.connect(context.destination); env.connect(convolver);
+        const vib = context.createOscillator(), vibGain = context.createGain();
+        vib.frequency.value = 5.1; vibGain.gain.value = f * .006;
+        vib.connect(vibGain); vib.start(when); vib.stop(when + dur + .25); sources.push(vib);
+        [[1, 'sawtooth', .5], [1, 'triangle', .5], [2.001, 'sine', .12]].forEach(([ratio, type, g]) => {
+          const o = context.createOscillator(), gain = context.createGain();
+          o.type = type; o.frequency.setValueAtTime(f * ratio, when);
+          vibGain.connect(o.frequency); gain.gain.value = g; o.connect(gain).connect(filter);
+          o.start(when); o.stop(when + dur + .25); sources.push(o);
+        });
+      }
+
+      function bell(event, when) {
+        // Celesta: bright struck tone with shimmering inharmonic partials.
+        const f = freqOf(event.midi);
+        const tail = Math.min(3.4, Math.max(1.1, event.duration * 60 / tempo() + 1.6));
+        const level = (event.velocity / 127) * .2;
+        const env = context.createGain();
+        env.gain.setValueAtTime(.0001, when);
+        env.gain.exponentialRampToValueAtTime(level, when + .004);
+        env.gain.exponentialRampToValueAtTime(.0001, when + tail);
+        env.connect(context.destination); env.connect(convolver);
+        [[1, 1], [2.76, .34], [5.4, .14], [8.1, .06]].forEach(([ratio, g]) => {
+          const o = context.createOscillator(), gain = context.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(f * ratio, when);
+          gain.gain.value = g; o.connect(gain).connect(env);
+          o.start(when); o.stop(when + tail + .05); sources.push(o);
+        });
+      }
+
+      function render(event, when) {
+        if (event.voice === 'cello') bow(event, when);
+        else if (event.voice === 'celesta') bell(event, when);
+        else pluck(event, when);
+      }
+
+      function currentBeat() {
+        if (!playing || !context) return positionBeat;
+        return Math.min(totalBeats, anchorBeat + (context.currentTime - anchorTime) * tempo() / 60);
+      }
+
+      function schedule() {
+        if (!playing) return;
+        const now = currentBeat();
+        const horizon = now + tempo() / 60 * .5;
+        while (eventIndex < piece.notes.length && piece.notes[eventIndex].beat < horizon) {
+          const event = piece.notes[eventIndex++];
+          if (event.beat + event.duration < now) continue;
+          if (muted.has(event.voice)) continue;
+          const when = context.currentTime + Math.max(.01, (event.beat - now) * 60 / tempo());
+          render(event, when);
+        }
+      }
+
+      function silence() {
+        clearInterval(scheduler); cancelAnimationFrame(frame);
+        sources.forEach(s => { try { s.stop(); } catch {} });
+        sources = [];
+      }
+
+      async function togglePlay() {
+        if (playing) return pause();
+        context ||= new (window.AudioContext || window.webkitAudioContext)();
+        if (!convolver) makeRoom();
+        await context.resume();
+        if (positionBeat >= totalBeats) positionBeat = 0;
+        playing = true; anchorBeat = positionBeat; anchorTime = context.currentTime;
+        eventIndex = piece.notes.findIndex(n => n.beat >= positionBeat - .001);
+        if (eventIndex < 0) eventIndex = piece.notes.length;
+        playButton.textContent = 'Ⅱ'; playButton.setAttribute('aria-label', 'Pause');
+        status.textContent = ' · playing';
+        schedule(); scheduler = setInterval(schedule, 120); update();
+      }
+
+      function pause() {
+        positionBeat = currentBeat(); playing = false; silence();
+        playButton.textContent = '▶'; playButton.setAttribute('aria-label', 'Play');
+        status.textContent = ' · paused'; update();
+      }
+
+      function stop() {
+        playing = false; silence(); positionBeat = 0;
+        playButton.textContent = '▶'; playButton.setAttribute('aria-label', 'Play');
+        status.textContent = ''; update();
+      }
+
+      function seekTo(beat) {
+        const resume = playing;
+        if (playing) pause();
+        positionBeat = Math.max(0, Math.min(totalBeats, Number(beat)));
+        update();
+        if (resume) togglePlay();
+      }
+
+      function activeSection(playIndex) {
+        return playIndex < 16 ? 'A · The falling' : 'B · The clearing';
+      }
+
+      function update() {
+        positionBeat = currentBeat();
+        if (playing && positionBeat >= totalBeats) {
+          playing = false; silence(); positionBeat = totalBeats;
+          playButton.textContent = '▶'; status.textContent = ' · complete';
+        }
+        seek.value = positionBeat;
+        const playIndex = Math.min(piece.order.length - 1, Math.floor(positionBeat / 4));
+        const written = piece.order[playIndex];
+        const section = activeSection(playIndex);
+        measureLabel.textContent = `Measure ${written} · ${section}`;
+        sectionTag.textContent = section;
+        clock.textContent = `${format(secondsAt(positionBeat))} / ${format(secondsAt(totalBeats))}`;
+        draw(positionBeat);
+        if (playing) frame = requestAnimationFrame(update);
+      }
+
+      function draw(playhead) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+          canvas.width = Math.round(rect.width * dpr);
+          canvas.height = Math.round(rect.height * dpr);
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        const left = 18, right = rect.width - 18, top = 22, bottom = rect.height - 17;
+        ctx.strokeStyle = '#172033'; ctx.lineWidth = 1;
+        for (let i = 0; i <= 32; i++) {
+          const x = left + (right - left) * i / 32;
+          ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+        }
+        let lo = 127, hi = 0;
+        piece.notes.forEach(n => { lo = Math.min(lo, n.midi); hi = Math.max(hi, n.midi); });
+        const span = Math.max(12, hi - lo);
+        piece.notes.forEach(note => {
+          const x = left + (right - left) * note.beat / totalBeats;
+          const width = Math.max(1.5, (right - left) * note.duration / totalBeats);
+          const y = bottom - (note.midi - lo) / span * (bottom - top);
+          ctx.fillStyle = colors[note.voice] || '#74829e';
+          ctx.globalAlpha = muted.has(note.voice) ? .12 : (note.beat < playhead ? .28 : .82);
+          const h = note.voice === 'celesta' ? 3 : (note.voice === 'melody' || note.voice === 'cello' ? 2.2 : 1.3);
+          if (note.voice === 'celesta') { ctx.fillRect(x - 1.5, y - 1.5, 3, 3); }
+          else ctx.fillRect(x, y, width, h);
+        });
+        ctx.globalAlpha = 1;
+        const playX = left + (right - left) * playhead / totalBeats;
+        ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(playX, top); ctx.lineTo(playX, bottom); ctx.stroke();
+      }
+
+      document.querySelectorAll('.voice-toggle').forEach(button => {
+        button.setAttribute('aria-pressed', 'false');
+        button.addEventListener('click', () => {
+          const name = button.dataset.voice;
+          if (muted.has(name)) muted.delete(name); else muted.add(name);
+          button.setAttribute('aria-pressed', muted.has(name) ? 'true' : 'false');
+          draw(currentBeat());
+        });
+      });
+
+      playButton.addEventListener('click', togglePlay);
+      stopButton.addEventListener('click', stop);
+      seek.addEventListener('input', e => seekTo(e.target.value));
+      tempoControl.addEventListener('input', e => {
+        const beat = currentBeat(), resume = playing;
+        if (playing) pause();
+        positionBeat = beat;
+        tempoValue.textContent = `${e.target.value} BPM`;
+        update();
+        if (resume) togglePlay();
+      });
+      window.addEventListener('resize', () => draw(currentBeat()));
+      document.addEventListener('keydown', e => {
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); togglePlay(); }
+      });
+
+      // Decorative rain over the map.
+      const mapEl = document.querySelector('.map');
+      for (let i = 0; i < 26; i++) {
+        const d = document.createElement('i');
+        d.className = 'drop';
+        d.style.left = (Math.random() * 100) + '%';
+        d.style.animationDuration = (1.1 + Math.random() * 1.4) + 's';
+        d.style.animationDelay = (-Math.random() * 2.5) + 's';
+        d.style.height = (10 + Math.random() * 14) + 'px';
+        mapEl.appendChild(d);
+      }
+      update();
+    })();
+  </script>
+</body>
+</html>

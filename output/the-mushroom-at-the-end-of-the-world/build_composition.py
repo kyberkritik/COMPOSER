@@ -10,7 +10,7 @@ OUT = Path(__file__).resolve().parent
 TEMPO = 66
 DIVISIONS = 8
 TITLE = "The Mushroom at the End of the World"
-SUBTITLE = "A baroque elegy for classical guitar"
+SUBTITLE = "A baroque elegy for classical guitar and cello"
 
 
 def midi(note: str) -> int:
@@ -24,6 +24,11 @@ def midi(note: str) -> int:
 
 
 def melody(*items):
+    return [{"beat": beat, "duration": duration, "midi": midi(note)} for beat, duration, note in items]
+
+
+def line(*items):
+    """A free voice (cello) given as (beat, duration, note) triples."""
     return [{"beat": beat, "duration": duration, "midi": midi(note)} for beat, duration, note in items]
 
 
@@ -57,6 +62,37 @@ MELODY = [
     melody((0, 4, "C5")),
 ]
 
+# A second instrument enters: a cello obbligato. In Section I it is the
+# subterranean mycelial network - sparse, sustained, mostly below the guitar.
+# In Section II it surfaces and fruits, rising into a singing co-protagonist,
+# and in the final bar it sustains the major third E, the "altered light".
+CELLO = [
+    line((0, 2, "C3"), (2, 2, "Eb3")),
+    line((0, 2, "D3"), (2, 2, "F3")),
+    line((0, 3, "Eb3"), (3, 1, "C3")),
+    line((0, 2, "D3"), (2, 1, "B2"), (3, 1, "D3")),
+    line((0, 2, "F3"), (2, 2, "Ab3")),
+    line((0, 2, "G3"), (2, 2, "E3")),
+    line((0, 2, "F3"), (2, 1, "D3"), (3, 1, "F3")),
+    line((0, 4, "G3")),
+    line((0, 2, "G3"), (2, 2, "C4")),
+    line((0, 2, "D4"), (2, 2, "Bb3")),
+    line((0, 1.5, "C4"), (1.5, .5, "Bb3"), (2, 2, "Ab3")),
+    line((0, 2, "B3"), (2, 1, "D4"), (3, 1, "F4")),
+    line((0, 2, "G4"), (2, 2, "Bb3")),
+    line((0, 2, "A3"), (2, 2, "D4")),
+    line((0, 1.5, "Eb4"), (1.5, .5, "D4"), (2, 2, "C4")),
+    line((0, 2, "D4"), (2, 2, "G3")),
+    line((0, 2, "C4"), (2, 2, "Eb4")),
+    line((0, 3, "G3"), (3, 1, "Ab3")),
+    line((0, 2, "Ab3"), (2, 2, "F3")),
+    line((0, 2, "D4"), (2, 1, "B3"), (3, 1, "D4")),
+    line((0, 2, "Bb3"), (2, 2, "G3")),
+    line((0, 2, "Ab3"), (2, 2, "C4")),
+    line((0, 2, "D4"), (2, 1, "B3"), (3, 1, "D4")),
+    line((0, 4, "E3")),
+]
+
 HARMONY_NAMES = [
     ["Eb3", "G3", "C4", "G3"], ["D3", "G3", "F3", "G3"],
     ["C4", "Eb4", "C4", "Eb4"], ["B2", "D3", "F3", "D3"],
@@ -85,6 +121,8 @@ HARMONY = [[midi(note) for note in measure] for measure in HARMONY_NAMES]
 BASS = [[midi(note) for note in measure] for measure in BASS_NAMES]
 ORDER = list(range(1, 9)) * 2 + list(range(9, 25)) * 2
 
+VELOCITIES = {"melody": 82, "inner": 58, "bass": 70, "cello": 74}
+
 
 def notated_voices(measure_number: int):
     idx = measure_number - 1
@@ -95,24 +133,26 @@ def notated_voices(measure_number: int):
             {"beat": 0, "duration": 2, "midi": BASS[idx][0]},
             {"beat": 2, "duration": 2, "midi": BASS[idx][1]},
         ],
+        "cello": CELLO[idx],
     }
 
 
 def performance_notes():
     notes = {}
-    velocities = {"melody": 82, "inner": 61, "bass": 72}
     for play_index, measure_number in enumerate(ORDER):
         base = play_index * 4
         for voice, events in notated_voices(measure_number).items():
             for event in events:
-                key = (base + event["beat"], event["midi"])
+                # Voice is part of the key so the cello never collides with the
+                # guitar: the two instruments must remain independent.
+                key = (base + event["beat"], event["midi"], voice)
                 candidate = {
                     "beat": key[0], "duration": event["duration"], "midi": event["midi"],
-                    "velocity": velocities[voice], "measure": measure_number, "voice": voice,
+                    "velocity": VELOCITIES[voice], "measure": measure_number, "voice": voice,
                 }
                 if key not in notes or candidate["duration"] > notes[key]["duration"]:
                     notes[key] = candidate
-    return sorted(notes.values(), key=lambda event: (event["beat"], event["midi"]))
+    return sorted(notes.values(), key=lambda event: (event["beat"], event["voice"], event["midi"]))
 
 
 def vlq(value: int) -> bytes:
@@ -128,19 +168,22 @@ def write_midi(notes):
     tpq = 480
     tempo_microseconds = round(60_000_000 / TEMPO)
     title_bytes = TITLE.encode("utf-8")
+    # Channel 0: nylon-string guitar (program 24). Channel 1: cello (program 42).
     timeline = [
         (0, 0, b"\xff\x03" + vlq(len(title_bytes)) + title_bytes),
         (0, 0, b"\xff\x51\x03" + tempo_microseconds.to_bytes(3, "big")),
         (0, 0, b"\xff\x58\x04\x04\x02\x18\x08"),
         (0, 0, b"\xff\x59\x02\xfd\x00"),  # C minor: three flats.
         (0, 1, bytes([0xC0, 24])),            # Nylon-string guitar.
+        (0, 1, bytes([0xC1, 42])),            # Cello.
     ]
     for event in notes:
+        channel = 1 if event["voice"] == "cello" else 0
         start = round(event["beat"] * tpq)
-        duration = max(30, round(event["duration"] * tpq * .94))
+        duration = max(30, round(event["duration"] * tpq * (.97 if channel == 1 else .94)))
         pitch = event["midi"]
-        timeline.append((start, 2, bytes([0x90, pitch, event["velocity"]])))
-        timeline.append((start + duration, 1, bytes([0x80, pitch, 0])))
+        timeline.append((start, 2, bytes([0x90 | channel, pitch, event["velocity"]])))
+        timeline.append((start + duration, 1, bytes([0x80 | channel, pitch, 0])))
     timeline.sort(key=lambda item: (item[0], item[1]))
     body = bytearray()
     previous = 0
@@ -160,15 +203,15 @@ SPELLINGS = {
 }
 
 
-def pitch_xml(sounding_midi: int):
-    written = sounding_midi + 12
+def pitch_xml(sounding_midi: int, written_shift: int = 12):
+    written = sounding_midi + written_shift
     step, alter = SPELLINGS[written % 12]
     octave = written // 12 - 1
     alter_xml = f"<alter>{alter}</alter>" if alter else ""
     return f"<pitch><step>{step}</step>{alter_xml}<octave>{octave}</octave></pitch>"
 
 
-def voice_xml(events, voice_number: int, stem: str):
+def voice_xml(events, voice_number: int, stem: str, written_shift: int = 12):
     result = []
     cursor = 0
     for event in events:
@@ -177,7 +220,7 @@ def voice_xml(events, voice_number: int, stem: str):
         if onset > cursor:
             result.append(f"<note><rest/><duration>{onset-cursor}</duration><voice>{voice_number}</voice></note>")
         result.append(
-            f"<note>{pitch_xml(event['midi'])}<duration>{duration}</duration><voice>{voice_number}</voice>"
+            f"<note>{pitch_xml(event['midi'], written_shift)}<duration>{duration}</duration><voice>{voice_number}</voice>"
             f"<stem>{stem}</stem></note>"
         )
         cursor = onset + duration
@@ -187,7 +230,8 @@ def voice_xml(events, voice_number: int, stem: str):
 
 
 def write_musicxml():
-    measures = []
+    guitar_measures = []
+    cello_measures = []
     for number in range(1, 25):
         voices = notated_voices(number)
         attributes = ""
@@ -216,19 +260,40 @@ def write_musicxml():
         content += voice_xml(voices["inner"], 2, "down")
         content += f"<backup><duration>{4*DIVISIONS}</duration></backup>"
         content += voice_xml(voices["bass"], 3, "down")
-        measures.append(f"<measure number=\"{number}\">{attributes}{direction}{left}{content}{right}</measure>")
+        guitar_measures.append(f"<measure number=\"{number}\">{attributes}{direction}{left}{content}{right}</measure>")
+
+        # Cello part: bass clef, sounding pitch (no octave transposition).
+        cello_attributes = ""
+        if number == 1:
+            cello_attributes = (
+                "<attributes><divisions>8</divisions><key><fifths>-3</fifths><mode>minor</mode></key>"
+                "<time><beats>4</beats><beat-type>4</beat-type></time>"
+                "<clef><sign>F</sign><line>4</line></clef></attributes>"
+            )
+        cello_content = voice_xml(voices["cello"], 1, "up", written_shift=0)
+        cello_measures.append(f"<measure number=\"{number}\">{cello_attributes}{left}{cello_content}{right}</measure>")
+
     xml = (
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
         "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 4.0 Partwise//EN\" "
         "\"http://www.musicxml.org/dtds/partwise.dtd\">\n"
         f"<score-partwise version=\"4.0\"><work><work-title>{escape(TITLE)}</work-title></work>"
-        "<identification><creator type=\"composer\">Original composition generated with Codex</creator>"
+        "<identification><creator type=\"composer\">Original composition generated with Codex; cello obbligato added by Claude</creator>"
         "<rights>Created for the user in this workspace</rights>"
         "<encoding><software>Codex composition generator</software></encoding></identification>"
-        "<part-list><score-part id=\"P1\"><part-name>Classical Guitar</part-name>"
+        "<part-list>"
+        "<score-part id=\"P1\"><part-name>Classical Guitar</part-name>"
         "<score-instrument id=\"P1-I1\"><instrument-name>Acoustic Guitar (nylon)</instrument-name></score-instrument>"
         "<midi-instrument id=\"P1-I1\"><midi-channel>1</midi-channel><midi-program>25</midi-program></midi-instrument>"
-        "</score-part></part-list><part id=\"P1\">" + "".join(measures) + "</part></score-partwise>\n"
+        "</score-part>"
+        "<score-part id=\"P2\"><part-name>Cello</part-name>"
+        "<score-instrument id=\"P2-I1\"><instrument-name>Cello</instrument-name></score-instrument>"
+        "<midi-instrument id=\"P2-I1\"><midi-channel>2</midi-channel><midi-program>43</midi-program></midi-instrument>"
+        "</score-part>"
+        "</part-list>"
+        "<part id=\"P1\">" + "".join(guitar_measures) + "</part>"
+        "<part id=\"P2\">" + "".join(cello_measures) + "</part>"
+        "</score-partwise>\n"
     )
     (OUT / "the-mushroom-at-the-end-of-the-world.musicxml").write_text(xml, encoding="utf-8")
 
@@ -238,6 +303,12 @@ def write_data(notes):
         "title": TITLE, "subtitle": SUBTITLE, "tempo": TEMPO,
         "beatsPerMeasure": 4, "notatedMeasures": 24,
         "playbackMeasures": len(ORDER), "order": ORDER, "notes": notes,
+        "instruments": [
+            {"voice": "melody", "label": "Guitar · melody", "instrument": "guitar"},
+            {"voice": "inner", "label": "Guitar · inner", "instrument": "guitar"},
+            {"voice": "bass", "label": "Guitar · bass", "instrument": "guitar"},
+            {"voice": "cello", "label": "Cello · obbligato", "instrument": "cello"},
+        ],
         "sections": [
             {"name": "I · Spores", "from": 0, "to": 16},
             {"name": "II · Ruins / Fruiting", "from": 16, "to": 48},
@@ -254,7 +325,9 @@ def main():
     write_midi(notes)
     write_musicxml()
     write_data(notes)
-    print(f"{TITLE}: 24 written measures, {len(ORDER)} played measures, {len(notes)} note events")
+    cello_count = sum(1 for note in notes if note["voice"] == "cello")
+    print(f"{TITLE}: 24 written measures, {len(ORDER)} played measures, "
+          f"{len(notes)} note events ({cello_count} cello).")
 
 
 if __name__ == "__main__":

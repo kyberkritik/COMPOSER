@@ -102,6 +102,17 @@
     .score-view { position: relative; height: 180px; border-top: 1px solid var(--line); background: #090b09; overflow: hidden; }
     #score-canvas { display: block; width: 100%; height: 100%; }
     .section-tag { position: absolute; top: 14px; left: 17px; padding: 5px 8px; color: #0c0e0b; background: var(--acid); font-size: .66rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 22px 20px; border-top: 1px solid var(--line); }
+    .voice-toggle {
+      display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px;
+      border: 1px solid var(--line); border-radius: 999px; background: transparent;
+      color: var(--paper); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+      transition: border-color .18s ease, opacity .18s ease, background .18s ease;
+    }
+    .voice-toggle:hover { border-color: var(--spore); }
+    .voice-toggle .swatch { width: 11px; height: 11px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+    .voice-toggle[aria-pressed="true"] { opacity: .34; background: #ffffff08; }
+    .voice-toggle[aria-pressed="true"] .swatch { box-shadow: none; opacity: .5; }
     .meta-grid { display: grid; grid-template-columns: 1.3fr .7fr; gap: 42px; padding: 29px 0 10px; }
     .program-note { color: var(--muted); font-family: Georgia, serif; font-size: 1rem; line-height: 1.7; }
     .program-note strong { color: var(--paper); font-weight: 400; }
@@ -125,9 +136,9 @@
   <main>
     <header class="masthead">
       <div>
-        <div class="kicker">An original work for classical guitar · C minor · 4/4</div>
+        <div class="kicker">An original work for classical guitar &amp; cello · C minor · 4/4</div>
         <h1>The Mushroom at the End of the World</h1>
-        <p class="deck">A baroque elegy in which a small chromatic organism survives the collapse of its harmony, fruits among the ruins, and ends in an altered light.</p>
+        <p class="deck">A baroque elegy in which a small chromatic organism survives the collapse of its harmony, fruits among the ruins, and ends in an altered light — now with a cello rising from the soil as a second living voice.</p>
       </div>
       <div class="organism" aria-hidden="true">
         <div class="cap"></div><div class="gills"></div><div class="stem"></div><div class="mycelium"></div>
@@ -151,11 +162,18 @@
         <span id="section-tag" class="section-tag">I · Spores</span>
         <canvas id="score-canvas" aria-label="Pitch map of the composition"></canvas>
       </div>
+      <div class="legend" role="group" aria-label="Instrument voices — toggle to mute">
+        <button class="voice-toggle" data-voice="melody"><span class="swatch" style="--c:#b8ff80"></span>Guitar · melody</button>
+        <button class="voice-toggle" data-voice="inner"><span class="swatch" style="--c:#827d66"></span>Guitar · inner</button>
+        <button class="voice-toggle" data-voice="bass"><span class="swatch" style="--c:#a35d38"></span>Guitar · bass</button>
+        <button class="voice-toggle" data-voice="cello"><span class="swatch" style="--c:#7db0ff"></span>Cello · obbligato</button>
+      </div>
     </section>
 
     <section class="meta-grid">
       <div class="program-note">
         <p><strong>The musical material:</strong> a five-note “spore” cell rises G–A♭–C–B–G, then propagates through inversion and sequence. The texture borrows the Air’s sustained upper voice, moving bass, suspensions, ornamented cadences and binary repeats, without quoting its melody.</p>
+        <p><strong>The cello</strong> is a second instrument added as a living counter-voice: underground and sustaining in Section I, it surfaces in Section II to fruit alongside the guitar, and holds the major third E under the final chord — the altered light. Use the legend below to mute any voice and hear the others alone.</p>
         <p>The second half descends through ruined harmonies before the final C-minor field changes to C major: not triumph, but adaptation. <span id="status" class="status" role="status"></span></p>
       </div>
       <nav class="downloads" aria-label="Downloads">
@@ -191,6 +209,7 @@
       let scheduler = null;
       let frame = null;
       let sources = [];
+      const muted = new Set();
 
       const tempo = () => Number(tempoControl.value);
       const secondsAt = beat => beat * 60 / tempo();
@@ -244,6 +263,51 @@
         });
       }
 
+      function bow(event, when) {
+        // A sustained, lightly vibrato'd bowed-string tone for the cello, to
+        // contrast with the guitar's decaying pluck.
+        const frequency = 440 * Math.pow(2, (event.midi - 69) / 12);
+        const dur = Math.max(.5, event.duration * 60 / tempo());
+        const envelope = context.createGain();
+        const filter = context.createBiquadFilter();
+        const level = (event.velocity / 127) * .14;
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(Math.min(3200, frequency * 5), when);
+        filter.frequency.linearRampToValueAtTime(Math.min(4200, frequency * 6.5), when + dur * .4);
+        envelope.gain.setValueAtTime(.0001, when);
+        envelope.gain.exponentialRampToValueAtTime(level, when + Math.min(.22, dur * .3));
+        envelope.gain.setValueAtTime(level, when + dur * .72);
+        envelope.gain.exponentialRampToValueAtTime(.0001, when + dur + .18);
+        filter.connect(envelope);
+        envelope.connect(context.destination);
+        envelope.connect(convolver);
+        const vibrato = context.createOscillator();
+        const vibratoGain = context.createGain();
+        vibrato.frequency.value = 5.2;
+        vibratoGain.gain.value = frequency * .006;
+        vibrato.connect(vibratoGain);
+        vibrato.start(when);
+        vibrato.stop(when + dur + .25);
+        sources.push(vibrato);
+        [[1, 'sawtooth', .5], [1, 'triangle', .5], [2.001, 'sine', .12]].forEach(([ratio, type, gainValue]) => {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = type;
+          oscillator.frequency.setValueAtTime(frequency * ratio, when);
+          vibratoGain.connect(oscillator.frequency);
+          gain.gain.value = gainValue;
+          oscillator.connect(gain).connect(filter);
+          oscillator.start(when);
+          oscillator.stop(when + dur + .25);
+          sources.push(oscillator);
+        });
+      }
+
+      function voice(event, when) {
+        if (event.voice === 'cello') bow(event, when);
+        else pluck(event, when);
+      }
+
       function schedule() {
         if (!playing) return;
         const now = currentBeat();
@@ -251,8 +315,9 @@
         while (eventIndex < piece.notes.length && piece.notes[eventIndex].beat < horizon) {
           const event = piece.notes[eventIndex++];
           if (event.beat + event.duration < now) continue;
+          if (muted.has(event.voice)) continue;
           const when = context.currentTime + Math.max(.01, (event.beat - now) * 60 / tempo());
-          pluck(event, when);
+          voice(event, when);
         }
       }
 
@@ -350,19 +415,31 @@
           const x = left + (right - left) * i / 48;
           ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
         }
+        const colors = { melody: '#b8ff80', bass: '#a35d38', cello: '#7db0ff', inner: '#827d66' };
         piece.notes.forEach(note => {
           const x = left + (right - left) * note.beat / totalBeats;
           const width = Math.max(1.5, (right - left) * note.duration / totalBeats);
-          const y = bottom - (note.midi - 39) / 40 * (bottom - top);
-          ctx.fillStyle = note.voice === 'melody' ? '#b8ff80' : note.voice === 'bass' ? '#a35d38' : '#827d66';
-          ctx.globalAlpha = note.beat < playhead ? .28 : .82;
-          ctx.fillRect(x, y, width, note.voice === 'melody' ? 2.2 : 1.3);
+          const y = bottom - (note.midi - 39) / 44 * (bottom - top);
+          ctx.fillStyle = colors[note.voice] || '#827d66';
+          const dim = muted.has(note.voice) ? .12 : (note.beat < playhead ? .28 : .82);
+          ctx.globalAlpha = dim;
+          ctx.fillRect(x, y, width, note.voice === 'melody' || note.voice === 'cello' ? 2.2 : 1.3);
         });
         ctx.globalAlpha = 1;
         const playX = left + (right - left) * playhead / totalBeats;
         ctx.strokeStyle = '#e8c87a'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(playX, top); ctx.lineTo(playX, bottom); ctx.stroke();
       }
+
+      document.querySelectorAll('.voice-toggle').forEach(button => {
+        button.setAttribute('aria-pressed', 'false');
+        button.addEventListener('click', () => {
+          const name = button.dataset.voice;
+          if (muted.has(name)) muted.delete(name); else muted.add(name);
+          button.setAttribute('aria-pressed', muted.has(name) ? 'true' : 'false');
+          draw(currentBeat());
+        });
+      });
 
       playButton.addEventListener('click', togglePlay);
       stopButton.addEventListener('click', stop);
