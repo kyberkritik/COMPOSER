@@ -295,7 +295,9 @@
         const fmts = VOWELS[vowel] || VOWELS.a;
         const scale = male ? .86 : 1.12;
         const out = ctx.createGain();
-        const level = (vel / 127) * (male ? .17 : .15);
+        // Band-pass formants lose a lot of energy, so the voices need a hot
+        // gain to sit on top of the mix.
+        const level = (vel / 127) * (male ? .42 : .4);
         out.gain.setValueAtTime(.0001, when);
         out.gain.linearRampToValueAtTime(level, when + .05);
         out.gain.setValueAtTime(level, when + Math.max(.1, d * .7));
@@ -310,7 +312,7 @@
           o.frequency.setValueAtTime(f * ratio, when); vg.connect(o.frequency);
           og.gain.value = lvl; o.connect(og).connect(src); o.start(when); o.stop(when + d + .2); sources.push(o);
         });
-        const amps = [1, .5, .25], bws = [80, 100, 130];
+        const amps = [1.4, .85, .45], bws = [80, 100, 130];
         fmts.forEach((fr, i) => {
           const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
           bp.frequency.value = fr * scale; bp.Q.value = Math.max(4, (fr * scale) / bws[i]);
