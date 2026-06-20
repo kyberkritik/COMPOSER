@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Composiciones</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f1ead8;
+      --muted: #aaa18d;
+      --line: rgba(241, 234, 216, .16);
+      --paper: #11120f;
+      --accent: #c9f59a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 10%, #27331f 0, transparent 30rem),
+        radial-gradient(circle at 85% 85%, #30251b 0, transparent 32rem),
+        #090a08;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    main {
+      width: min(1080px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: clamp(52px, 9vw, 110px) 0 64px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: .72rem;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 18px 0 56px;
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: clamp(3.6rem, 10vw, 8.5rem);
+      font-weight: 400;
+      line-height: .88;
+      letter-spacing: -.06em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .piece {
+      position: relative;
+      display: flex;
+      min-height: 300px;
+      padding: 28px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      color: inherit;
+      background: rgba(17, 18, 15, .78);
+      text-decoration: none;
+      transition: border-color .2s ease, transform .2s ease, background .2s ease;
+    }
+
+    .piece:hover,
+    .piece:focus-visible {
+      border-color: var(--accent);
+      background: rgba(24, 27, 20, .94);
+      transform: translateY(-4px);
+      outline: none;
+    }
+
+    .piece::after {
+      position: absolute;
+      right: 25px;
+      bottom: 20px;
+      color: var(--accent);
+      content: "↗";
+      font-size: 1.6rem;
+    }
+
+    .number {
+      flex: 0 0 54px;
+      color: var(--muted);
+      font-size: .75rem;
+      letter-spacing: .15em;
+    }
+
+    .piece-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    h2 {
+      max-width: 390px;
+      margin: 0;
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: clamp(2.1rem, 5vw, 4.2rem);
+      font-weight: 400;
+      line-height: .95;
+      letter-spacing: -.04em;
+    }
+
+    .meta {
+      margin: 35px 35px 0 0;
+      color: var(--muted);
+      font-size: .7rem;
+      letter-spacing: .12em;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    footer {
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: .7rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+      .piece { min-height: 250px; }
+      h1 { margin-bottom: 36px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Archivo sonoro · 02 obras</div>
+    <h1>Composiciones</h1>
+
+    <nav class="grid" aria-label="Seleccionar composición">
+      <a class="piece" href="output/air-on-the-g-string/">
+        <span class="number">01</span>
+        <span class="piece-copy">
+          <h2>Air on the G String</h2>
+          <span class="meta">J. S. Bach · Arreglo y reproductor</span>
+        </span>
+      </a>
+
+      <a class="piece" href="output/the-mushroom-at-the-end-of-the-world/">
+        <span class="number">02</span>
+        <span class="piece-copy">
+          <h2>The Mushroom at the End of the World</h2>
+          <span class="meta">Obra original · Guitarra clásica · Do menor</span>
+        </span>
+      </a>
+    </nav>
+
+    <footer>Selecciona una obra para abrir su reproductor</footer>
+  </main>
+</body>
+</html>
