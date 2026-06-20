@@ -300,7 +300,7 @@
         const out = ctx.createGain();
         // Band-pass formants lose a lot of energy, so the voices need a hot
         // gain to sit on top of the mix.
-        const level = (vel / 127) * (male ? .42 : .4);
+        const level = (vel / 127) * (male ? .42 : .68);
         out.gain.setValueAtTime(.0001, when);
         out.gain.linearRampToValueAtTime(level, when + .05);
         out.gain.setValueAtTime(level, when + Math.max(.1, d * .7));
