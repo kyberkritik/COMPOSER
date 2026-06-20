@@ -174,14 +174,17 @@
       }
       const sendVerb = (node, amt) => { const g = ctx.createGain(); g.gain.value = amt; node.connect(g).connect(verb); };
       const sendDelay = (node, amt) => { const g = ctx.createGain(); g.gain.value = amt; node.connect(g).connect(delay); };
-      function noise() { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; sources.push(s); return s; }
+      // Track only currently-sounding nodes; drop each when it ends so memory
+      // stays bounded across the whole 4-minute track instead of leaking.
+      function keep(node) { sources.push(node); node.onended = () => { const i = sources.indexOf(node); if (i >= 0) sources.splice(i, 1); }; return node; }
+      function noise() { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; keep(s); return s; }
 
       // ---- drum voices ----
       function kick(when, vel) {
         const o = ctx.createOscillator(), g = ctx.createGain();
         o.frequency.setValueAtTime(132, when); o.frequency.exponentialRampToValueAtTime(46, when + .11);
         g.gain.setValueAtTime((vel / 127) * 1.05, when); g.gain.exponentialRampToValueAtTime(.0001, when + .16);
-        o.connect(g).connect(master); o.start(when); o.stop(when + .2); sources.push(o);
+        o.connect(g).connect(master); o.start(when); o.stop(when + .2); keep(o);
         const n = noise(), ng = ctx.createGain(), hp = ctx.createBiquadFilter();
         hp.type = 'highpass'; hp.frequency.value = 1200;
         ng.gain.setValueAtTime(.35, when); ng.gain.exponentialRampToValueAtTime(.0001, when + .03);
@@ -205,7 +208,7 @@
           const o = ctx.createOscillator(), g = ctx.createGain();
           o.frequency.setValueAtTime(190, when); o.frequency.exponentialRampToValueAtTime(96, when + .1);
           g.gain.setValueAtTime((vel / 127) * .8, when); g.gain.exponentialRampToValueAtTime(.0001, when + .16);
-          o.connect(g).connect(master); o.start(when); o.stop(when + .2); sources.push(o); sendVerb(g, .12);
+          o.connect(g).connect(master); o.start(when); o.stop(when + .2); keep(o); sendVerb(g, .12);
         } else {
           const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1700; bp.Q.value = 2.4;
           const g = ctx.createGain(); g.gain.setValueAtTime((vel / 127) * .6, when); g.gain.exponentialRampToValueAtTime(.0001, when + .06);
@@ -219,7 +222,7 @@
         lp.frequency.setValueAtTime(Math.min(2200, f * 6), when); lp.frequency.exponentialRampToValueAtTime(Math.max(180, f * 1.6), when + dur);
         const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .5, when + .006); g.gain.exponentialRampToValueAtTime(.0001, when + dur);
         lp.connect(g).connect(master);
-        [['sawtooth', 1], ['square', .5]].forEach(([t, lvl]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t; o.frequency.setValueAtTime(f, when); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + dur + .05); sources.push(o); });
+        [['sawtooth', 1], ['square', .5]].forEach(([t, lvl]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t; o.frequency.setValueAtTime(f, when); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + dur + .05); keep(o); });
       }
       function acid(when, dur, f, vel, slide) {
         // A round, reedy synth (saz/mizmar flavour). Keeps the Acid-Arab slide
@@ -241,7 +244,7 @@
           const o = ctx.createOscillator(), og = ctx.createGain(); o.type = type; og.gain.value = lvl;
           if (slide && lastAcid) { o.frequency.setValueAtTime(lastAcid, when); o.frequency.exponentialRampToValueAtTime(f, when + .07); }
           else o.frequency.setValueAtTime(f, when);
-          o.connect(og).connect(lp); o.start(when); o.stop(when + dur + .08); sources.push(o);
+          o.connect(og).connect(lp); o.start(when); o.stop(when + dur + .08); keep(o);
         });
         lastAcid = f;
       }
@@ -249,31 +252,31 @@
         const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(Math.min(6000, f * 5), when); lp.frequency.exponentialRampToValueAtTime(f * 2, when + dur + .1); lp.Q.value = 4;
         const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .26, when + .004); g.gain.exponentialRampToValueAtTime(.0001, when + dur + .12);
         lp.connect(g).connect(master); sendDelay(g, .22); sendVerb(g, .12);
-        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, when); o.connect(lp); o.start(when); o.stop(when + dur + .15); sources.push(o);
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, when); o.connect(lp); o.start(when); o.stop(when + dur + .15); keep(o);
       }
       function pad(when, dur, f, vel) {
         const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(3400, f * 4.5); lp.Q.value = .8;
         const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.linearRampToValueAtTime((vel / 127) * .12, when + .25); g.gain.setValueAtTime((vel / 127) * .12, when + dur * spb() * .6); g.gain.exponentialRampToValueAtTime(.0001, when + dur * spb() + .3);
         lp.connect(g).connect(master); sendVerb(g, .4);
-        [-7, 0, 7].forEach(cents => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * Math.pow(2, cents / 1200), when); o.connect(lp); o.start(when); o.stop(when + dur * spb() + .35); sources.push(o); });
+        [-6, 6].forEach(cents => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * Math.pow(2, cents / 1200), when); o.connect(lp); o.start(when); o.stop(when + dur * spb() + .35); keep(o); });
       }
       function stab(when, f, vel) {
         const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(Math.min(6500, f * 6), when); lp.frequency.exponentialRampToValueAtTime(f * 2.2, when + .2); lp.Q.value = 3;
         const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .2, when + .005); g.gain.exponentialRampToValueAtTime(.0001, when + .22);
         lp.connect(g).connect(master); sendVerb(g, .18);
-        [['sawtooth', 1], ['square', .4]].forEach(([t, lvl]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t; o.frequency.setValueAtTime(f, when); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + .26); sources.push(o); });
+        [['sawtooth', 1], ['square', .4]].forEach(([t, lvl]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t; o.frequency.setValueAtTime(f, when); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + .26); keep(o); });
       }
       function lead(when, dur, f, vel) {
         const d = dur * spb();
         const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(7000, f * 5); lp.Q.value = 2;
         const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .3, when + .02); g.gain.setValueAtTime((vel / 127) * .3, when + d * .7); g.gain.exponentialRampToValueAtTime(.0001, when + d + .12);
         lp.connect(g).connect(master); sendVerb(g, .3); sendDelay(g, .26);
-        const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 5.4; vg.gain.value = f * .008; vib.connect(vg); vib.start(when); vib.stop(when + d + .15); sources.push(vib);
+        const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 5.4; vg.gain.value = f * .008; vib.connect(vg); vib.start(when); vib.stop(when + d + .15); keep(vib);
         [['sawtooth', 1, 1], ['square', 1.005, .5]].forEach(([t, ratio, lvl]) => {
           const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t;
           if (lastLead && Math.abs(Math.log2(f / lastLead)) < .45) { o.frequency.setValueAtTime(lastLead * ratio, when); o.frequency.exponentialRampToValueAtTime(f * ratio, when + .05); }
           else o.frequency.setValueAtTime(f * ratio, when);
-          vg.connect(o.frequency); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + d + .15); sources.push(o);
+          vg.connect(o.frequency); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + d + .15); keep(o);
         });
         lastLead = f;
       }
@@ -282,7 +285,7 @@
         const tail = Math.min(1.4, dur * spb() + .7);
         const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .34, when + .004); g.gain.exponentialRampToValueAtTime(.0001, when + tail);
         bp.connect(g).connect(master); sendVerb(g, .2); sendDelay(g, .14);
-        [[1, 0], [1.003, 0]].forEach(([ratio]) => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * ratio, when); o.connect(bp); o.start(when); o.stop(when + tail + .05); sources.push(o); });
+        [[1, 0], [1.003, 0]].forEach(([ratio]) => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * ratio, when); o.connect(bp); o.start(when); o.stop(when + tail + .05); keep(o); });
       }
 
       // Formant vowel tables [F1, F2, F3] (Hz) for a neutral singing voice.
@@ -305,12 +308,12 @@
         out.connect(master); sendVerb(out, .32); sendDelay(out, .12);
         const vib = ctx.createOscillator(), vg = ctx.createGain();
         vib.frequency.value = male ? 5 : 5.6; vg.gain.value = f * .012;
-        vib.connect(vg); vib.start(when); vib.stop(when + d + .2); sources.push(vib);
+        vib.connect(vg); vib.start(when); vib.stop(when + d + .2); keep(vib);
         const src = ctx.createGain(); src.gain.value = 1;
         [[1, 1], [1.004, .5]].forEach(([ratio, lvl]) => {
           const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sawtooth';
           o.frequency.setValueAtTime(f * ratio, when); vg.connect(o.frequency);
-          og.gain.value = lvl; o.connect(og).connect(src); o.start(when); o.stop(when + d + .2); sources.push(o);
+          og.gain.value = lvl; o.connect(og).connect(src); o.start(when); o.stop(when + d + .2); keep(o);
         });
         const amps = [1.4, .85, .45], bws = [80, 100, 130];
         fmts.forEach((fr, i) => {
@@ -389,19 +392,22 @@
       const pitchSpan = Math.max(12, pitchHi - pitchLo);
       const DRUM_LANE = { kick: 0, perc: 1, hat: 2, clap: 3 };
 
-      function draw(playhead) {
-        const dpr = window.devicePixelRatio || 1, rect = canvas.getBoundingClientRect();
-        if (canvas.width !== Math.round(rect.width * dpr)) { canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr); }
-        const c = canvas.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, rect.width, rect.height);
-        const L = 14, R = rect.width - 14, T = 12, B = rect.height - 12;
-        const split = T + (B - T) * .66;
+      // The note map is static, so render all 8000+ notes ONCE to an offscreen
+      // canvas; each animation frame only blits it and draws the playhead. This
+      // keeps the main thread free so the audio scheduler never starves.
+      let staticCanvas = null, staticDirty = true;
+      function buildStatic(rect, dpr) {
+        if (!staticCanvas) staticCanvas = document.createElement('canvas');
+        staticCanvas.width = Math.round(rect.width * dpr); staticCanvas.height = Math.round(rect.height * dpr);
+        const c = staticCanvas.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, rect.width, rect.height);
+        const L = 14, R = rect.width - 14, T = 12, B = rect.height - 12, split = T + (B - T) * .66;
         c.strokeStyle = '#17112a'; c.lineWidth = 1;
         for (let bar = 0; bar <= piece.playbackMeasures; bar += 4) { const x = L + (R - L) * (bar * 4) / totalBeats; c.globalAlpha = bar % 16 === 0 ? .9 : .4; c.beginPath(); c.moveTo(x, T); c.lineTo(x, B); c.stroke(); }
         c.globalAlpha = 1; c.strokeStyle = '#241a3a'; c.beginPath(); c.moveTo(L, split); c.lineTo(R, split); c.stroke();
         piece.notes.forEach(n => {
           const x = L + (R - L) * n.beat / totalBeats;
           c.fillStyle = colors[n.voice] || '#9a8fb5';
-          c.globalAlpha = muted.has(n.voice) ? .1 : (n.beat < playhead ? .3 : .9);
+          c.globalAlpha = muted.has(n.voice) ? .1 : .9;
           if (DRUMS.has(n.voice)) {
             const lane = DRUM_LANE[n.voice]; const y = split + 10 + lane * ((B - split - 12) / 4);
             c.fillRect(x, y, 2.4, 3.4);
@@ -411,7 +417,18 @@
             c.fillRect(x, y, w, n.voice === 'lead' ? 2.6 : 1.5);
           }
         });
-        c.globalAlpha = 1; const px = L + (R - L) * playhead / totalBeats;
+        c.globalAlpha = 1; staticDirty = false;
+      }
+      function draw(playhead) {
+        const dpr = window.devicePixelRatio || 1, rect = canvas.getBoundingClientRect();
+        if (canvas.width !== Math.round(rect.width * dpr)) { canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr); staticDirty = true; }
+        if (staticDirty || !staticCanvas) buildStatic(rect, dpr);
+        const c = canvas.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, canvas.width, canvas.height); c.drawImage(staticCanvas, 0, 0);
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const L = 14, R = rect.width - 14, T = 12, B = rect.height - 12;
+        const px = L + (R - L) * playhead / totalBeats;
+        c.fillStyle = 'rgba(6,3,16,0.5)'; c.fillRect(L, T, Math.max(0, px - L), B - T);  // dim played region
         c.strokeStyle = '#ff2ea6'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(px, T); c.lineTo(px, B); c.stroke();
       }
 
@@ -420,7 +437,7 @@
       piece.instruments.forEach(inst => {
         const b = document.createElement('button'); b.className = 'voice-toggle'; b.dataset.voice = inst.voice; b.setAttribute('aria-pressed', 'false');
         b.innerHTML = `<span class="swatch" style="--c:${inst.color}"></span>${inst.label}`;
-        b.addEventListener('click', () => { const v = inst.voice; if (muted.has(v)) muted.delete(v); else muted.add(v); b.setAttribute('aria-pressed', muted.has(v) ? 'true' : 'false'); draw(currentBeat()); });
+        b.addEventListener('click', () => { const v = inst.voice; if (muted.has(v)) muted.delete(v); else muted.add(v); b.setAttribute('aria-pressed', muted.has(v) ? 'true' : 'false'); staticDirty = true; draw(currentBeat()); });
         legend.appendChild(b);
       });
 
