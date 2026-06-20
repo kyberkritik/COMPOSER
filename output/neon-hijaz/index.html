@@ -93,7 +93,7 @@
     <p class="crumb"><a href="../../index.html">← Composiciones</a> · linaje: Bach → Codex → Claude → <b>la pista</b></p>
     <div class="kicker">A new hit by Claude · D double harmonic / Hijaz · 124 BPM · 4/4</div>
     <h1>NEON HIJAZ</h1>
-    <p class="deck">The spore motif that grew from Bach's Air now hits the dancefloor: a Modern-Talking lead hook over four-on-the-floor house, an Acid-Arab 303, darbuka and oud — dark, glittering, and built to move.</p>
+    <p class="deck">The spore motif that grew from Bach's Air now hits the dancefloor: a Modern-Talking lead hook over four-on-the-floor house, an Acid-Arab reed, darbuka and oud — plus a male and a female voice singing the verses and chorus, so you can hear the full ~4-minute song take shape.</p>
     <div class="tags">
       <span class="tag">Italo-disco</span><span class="tag">Modern Talking</span><span class="tag">In-your-face House</span>
       <span class="tag">Acid Arab</span><span class="tag">Double harmonic minor</span><span class="tag">Hijaz</span>
@@ -106,8 +106,8 @@
           <button id="stop" aria-label="Stop">■</button>
         </div>
         <div class="position">
-          <div class="position-head"><span id="section">Intro</span><span id="clock">0:00 / 2:03</span></div>
-          <input id="seek" type="range" min="0" max="256" step="0.25" value="0" aria-label="Playback position">
+          <div class="position-head"><span id="section">Intro</span><span id="clock">0:00 / 4:07</span></div>
+          <input id="seek" type="range" min="0" max="512" step="0.25" value="0" aria-label="Playback position">
         </div>
         <label class="tempo" for="tempo">Tempo <output id="tempo-value">124 BPM</output><input id="tempo" type="range" min="110" max="134" value="124"></label>
       </div>
@@ -118,7 +118,8 @@
     <section class="meta-grid">
       <div class="note">
         <p><strong>The concept:</strong> take everything from the earlier pieces and push it onto the dancefloor. The mushroom's “spore” cell (semitone up, leap, semitone down) becomes the soaring hook <strong>D–E♭–G–F♯–D</strong>, now in the <strong>D double harmonic / Hijaz</strong> scale (D E♭ F♯ G A B♭ C♯) — the half-step b2 and major-7th give that dark, Byzantine glitter.</p>
-        <p><strong>The instruments of the hit:</strong> Modern-Talking octave bass, offbeat synth stabs, lush detuned pad and a bright lead; in-your-face House kick, claps and pumping open hats; and the Acid-Arab layer — a resonant, sliding 303, a darbuka groove and an oud that runs the scale in the Arabic break. The arrangement is a real single: intro → chorus → verse → chorus → Arabic break → final chorus (lead up an octave) → outro.</p>
+        <p><strong>The instruments of the hit:</strong> Modern-Talking octave bass, offbeat synth stabs, lush detuned pad and a bright lead; in-your-face House kick, claps and pumping open hats; and the Acid-Arab layer — a sliding reed synth, a darbuka groove and an oud that runs the scale in the Arabic break.</p>
+        <p><strong>Voices (a sketch of the full song):</strong> a <strong>male voice</strong> carries the verses in a low register, and a <strong>female voice</strong> sings the chorus hook up high; in the bridge they trade call-and-response, and in the last two choruses they sing it together an octave apart. They are synthesized from scratch (formant filters shaping vowels), so it is a demo of where real vocals would go. The arrangement is a full single: intro → verse → chorus → verse → chorus → Arabic break → duet bridge → double chorus → final chorus (lead up an octave) → outro, about four minutes.</p>
         <p>Hit ▶ (or space), ride the tempo, and mute any track in the legend to build your own version. <span id="status" class="status" role="status"></span></p>
       </div>
       <nav class="downloads" aria-label="Downloads">
@@ -284,6 +285,40 @@
         [[1, 0], [1.003, 0]].forEach(([ratio]) => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * ratio, when); o.connect(bp); o.start(when); o.stop(when + tail + .05); sources.push(o); });
       }
 
+      // Formant vowel tables [F1, F2, F3] (Hz) for a neutral singing voice.
+      const VOWELS = { a: [800, 1150, 2800], e: [450, 1700, 2600], i: [350, 2000, 2800], o: [450, 800, 2700], u: [350, 700, 2600] };
+      function singer(when, dur, f, vel, vowel, male) {
+        // Subtractive formant synthesis: a buzzy glottal source (saws + vibrato)
+        // shaped by three band-pass "formants" -> a sung vowel. Male formants are
+        // scaled down, female up, to read as two different singers.
+        const d = dur * spb();
+        const fmts = VOWELS[vowel] || VOWELS.a;
+        const scale = male ? .86 : 1.12;
+        const out = ctx.createGain();
+        const level = (vel / 127) * (male ? .17 : .15);
+        out.gain.setValueAtTime(.0001, when);
+        out.gain.linearRampToValueAtTime(level, when + .05);
+        out.gain.setValueAtTime(level, when + Math.max(.1, d * .7));
+        out.gain.exponentialRampToValueAtTime(.0001, when + d + .16);
+        out.connect(master); sendVerb(out, .32); sendDelay(out, .12);
+        const vib = ctx.createOscillator(), vg = ctx.createGain();
+        vib.frequency.value = male ? 5 : 5.6; vg.gain.value = f * .012;
+        vib.connect(vg); vib.start(when); vib.stop(when + d + .2); sources.push(vib);
+        const src = ctx.createGain(); src.gain.value = 1;
+        [[1, 1], [1.004, .5]].forEach(([ratio, lvl]) => {
+          const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sawtooth';
+          o.frequency.setValueAtTime(f * ratio, when); vg.connect(o.frequency);
+          og.gain.value = lvl; o.connect(og).connect(src); o.start(when); o.stop(when + d + .2); sources.push(o);
+        });
+        const amps = [1, .5, .25], bws = [80, 100, 130];
+        fmts.forEach((fr, i) => {
+          const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+          bp.frequency.value = fr * scale; bp.Q.value = Math.max(4, (fr * scale) / bws[i]);
+          const fg = ctx.createGain(); fg.gain.value = amps[i];
+          src.connect(bp).connect(fg).connect(out);
+        });
+      }
+
       function render(ev, when) {
         switch (ev.voice) {
           case 'kick': return kick(when, ev.velocity);
@@ -297,6 +332,8 @@
           case 'stab': return stab(when, freqOf(ev.midi), ev.velocity);
           case 'lead': return lead(when, ev.duration, freqOf(ev.midi), ev.velocity);
           case 'oud': return oud(when, ev.duration, freqOf(ev.midi), ev.velocity);
+          case 'voxF': return singer(when, ev.duration, freqOf(ev.midi), ev.velocity, ev.vowel, false);
+          case 'voxM': return singer(when, ev.duration, freqOf(ev.midi), ev.velocity, ev.vowel, true);
         }
       }
 

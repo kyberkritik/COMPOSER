@@ -186,34 +186,52 @@ def oud_phrase(notes, bar, kind):
 FULL = {"kick", "clap", "hat", "hatdense", "perc", "bass", "acid", "arp", "pad", "stab", "lead"}
 
 
+def block(layers, bars):
+    return [set(layers) for _ in range(bars)]
+
+
 def build_plan():
-    """A real hit arrangement across 64 bars (~2:04 at 124 BPM)."""
+    """A full single across 128 bars (~4:07 at 124 BPM) with vocals."""
     plan = []
-    # Intro (0-7): atmosphere -> beat enters
-    plan += [{"pad", "perc", "oud:ornament"}] * 2
-    plan += [{"pad", "perc", "hat", "oud:ornament"}] * 2
-    plan += [{"pad", "perc", "hat", "kick", "bass"}] * 2
-    plan += [{"pad", "perc", "hat", "kick", "bass", "clap", "arp"}] * 2
-    # Chorus A (8-15)
-    plan += [set(FULL)] * 8
-    # Verse (16-23): stripped, darker, oud answers
-    base_verse = {"kick", "hat", "perc", "bass", "arp"}
-    plan += [base_verse | {"oud:call"} if i % 2 == 1 else set(base_verse) for i in range(8)]
-    # Chorus B (24-31)
-    plan += [set(FULL)] * 8
-    # Break (32-39): drop the kick for an Arabic moment, then build back
-    plan += [{"pad", "perc", "oud:run_down"}] * 2
-    plan += [{"pad", "perc", "acid", "oud:run_up"}] * 2
-    plan += [{"kick", "hat", "perc", "bass", "acid", "oud:call"}] * 2
-    plan += [{"kick", "hat", "hatdense", "clap", "perc", "bass", "acid", "arp"}] * 2
-    # Final Chorus C (40-55): biggest; lead jumps an octave from bar 48
-    plan += [set(FULL)] * 16
-    # Outro (56-63): filter down to the D Hijaz drone
-    plan += [{"pad", "bass", "perc", "oud:ornament"}] * 2
-    plan += [{"pad", "oud:ornament"}] * 2
-    plan += [{"pad"}] * 2
-    plan += [{"pad"}] * 2
+    # Intro (0-7)
+    plan += block({"pad", "perc", "oud:ornament"}, 2)
+    plan += block({"pad", "perc", "hat", "oud:ornament"}, 2)
+    plan += block({"pad", "perc", "hat", "kick", "bass"}, 2)
+    plan += block({"pad", "perc", "hat", "kick", "bass", "clap", "arp"}, 2)
+    # Verse 1 - male vocal (8-23)
+    verse = {"kick", "hat", "perc", "bass", "arp", "pad", "voxM"}
+    plan += [verse | {"oud:call"} if i % 4 == 3 else set(verse) for i in range(16)]
+    # Chorus 1 - female vocal (24-39)
+    plan += block(FULL | {"voxF"}, 16)
+    # Verse 2 - male vocal (40-47)
+    plan += [verse | {"oud:call"} if i % 4 == 3 else set(verse) for i in range(8)]
+    # Chorus 2 - female vocal (48-63)
+    plan += block(FULL | {"voxF"}, 16)
+    # Break - Arabic, instrumental (64-71)
+    plan += block({"pad", "perc", "oud:run_down"}, 2)
+    plan += block({"pad", "perc", "acid", "oud:run_up"}, 2)
+    plan += block({"kick", "hat", "perc", "bass", "acid", "oud:call"}, 2)
+    plan += block({"kick", "hat", "hatdense", "clap", "perc", "bass", "acid", "arp"}, 2)
+    # Bridge - call & response (72-79): male asks, female answers
+    plan += block({"kick", "hat", "perc", "bass", "pad", "voxM"}, 4)
+    plan += block({"kick", "hat", "perc", "bass", "pad", "arp", "voxF"}, 4)
+    # Chorus 3 - both voices, big (80-95)
+    plan += block(FULL | {"voxF", "voxMh"}, 16)
+    # Chorus 4 - both voices, lead up an octave (96-111)
+    plan += block(FULL | {"voxF", "voxMh"}, 16)
+    # Outro (112-127): filter down to the D Hijaz drone
+    plan += block({"pad", "bass", "perc", "oud:ornament"}, 4)
+    plan += block({"pad", "oud:ornament"}, 4)
+    plan += block({"pad"}, 4)
+    plan += block({"pad"}, 4)
     return plan
+
+
+def emit_vocal(notes, bar, table, voice, octave):
+    base = bar * 4
+    for (b, d, name, vow) in table[bar % 4]:
+        notes.append({"beat": base + b, "duration": d, "midi": midi(name) + octave,
+                      "velocity": VEL[voice], "voice": voice, "bar": bar, "vowel": vow})
 
 
 def build_notes():
@@ -222,11 +240,17 @@ def build_notes():
     for bar, layers in enumerate(plan):
         chord = CHORDS[bar % 4]
         ouds = [l.split(":", 1)[1] for l in layers if l.startswith("oud:")]
-        clean = {l for l in layers if not l.startswith("oud:")}
-        lead_oct = 12 if 48 <= bar <= 55 else 0
+        clean = {l for l in layers if not l.startswith("oud:") and not l.startswith("vox")}
+        lead_oct = 12 if 96 <= bar <= 111 else 0
         emit_bar(notes, bar, clean, chord, lead_oct=lead_oct)
         for kind in ouds:
             oud_phrase(notes, bar, kind)
+        if "voxF" in layers:
+            emit_vocal(notes, bar, FEMALE, "voxF", 0)
+        if "voxM" in layers:
+            emit_vocal(notes, bar, MALE, "voxM", 0)
+        if "voxMh" in layers:  # male sings the hook an octave below the female
+            emit_vocal(notes, bar, FEMALE, "voxM", -12)
     notes.sort(key=lambda n: (n["beat"], n["voice"], n["midi"]))
     return notes, len(plan)
 
@@ -288,15 +312,20 @@ def write_data(notes, bars):
             {"voice": "stab", "label": "Stab", "color": "#ff6fe0"},
             {"voice": "lead", "label": "Lead hook", "color": "#ffe14d"},
             {"voice": "oud", "label": "Oud", "color": "#ff8a5b"},
+            {"voice": "voxF", "label": "Voice · female", "color": "#ff7ab0"},
+            {"voice": "voxM", "label": "Voice · male", "color": "#6fa8ff"},
         ],
         "sections": [
             {"name": "Intro", "from": 0, "to": 8},
-            {"name": "Chorus", "from": 8, "to": 16},
-            {"name": "Verse", "from": 16, "to": 24},
-            {"name": "Chorus", "from": 24, "to": 32},
-            {"name": "Break · Arabic", "from": 32, "to": 40},
-            {"name": "Final Chorus", "from": 40, "to": 56},
-            {"name": "Outro", "from": 56, "to": 64},
+            {"name": "Verse · male", "from": 8, "to": 24},
+            {"name": "Chorus · female", "from": 24, "to": 40},
+            {"name": "Verse · male", "from": 40, "to": 48},
+            {"name": "Chorus · female", "from": 48, "to": 64},
+            {"name": "Break · Arabic", "from": 64, "to": 72},
+            {"name": "Bridge · duet", "from": 72, "to": 80},
+            {"name": "Chorus · duet", "from": 80, "to": 96},
+            {"name": "Final Chorus", "from": 96, "to": 112},
+            {"name": "Outro", "from": 112, "to": 128},
         ],
     }
     (OUT / "composition.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
