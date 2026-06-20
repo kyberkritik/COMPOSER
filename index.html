@@ -77,11 +77,17 @@
     }
 
     .piece.feature {
-      grid-column: 1 / -1;
-      min-height: 220px;
+      border-color: #ff2ea655;
       background:
-        radial-gradient(ellipse at 88% 120%, #16314d99 0, transparent 22rem),
-        rgba(17, 18, 15, .78);
+        radial-gradient(ellipse at 90% 120%, #4a0f5566 0, transparent 20rem),
+        radial-gradient(ellipse at 0% 0%, #0a2a4d55 0, transparent 18rem),
+        rgba(17, 18, 15, .82);
+      box-shadow: 0 0 40px #ff2ea61f inset;
+    }
+    .piece.feature::after { color: #ff2ea6; }
+    .piece.feature h2 {
+      background: linear-gradient(95deg, #ff2ea6, #ffd34d 50%, #21e6ff);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
     }
 
     .piece::after {
@@ -142,7 +148,7 @@
 </head>
 <body>
   <main>
-    <div class="eyebrow">Archivo sonoro · 03 obras · un linaje</div>
+    <div class="eyebrow">Archivo sonoro · 04 obras · un linaje</div>
     <h1>Composiciones</h1>
 
     <nav class="grid" aria-label="Seleccionar composición">
@@ -162,16 +168,24 @@
         </span>
       </a>
 
-      <a class="piece feature" href="output/the-cartographer-of-rain/">
+      <a class="piece" href="output/the-cartographer-of-rain/">
         <span class="number">03</span>
         <span class="piece-copy">
           <h2>The Cartographer of Rain</h2>
           <span class="meta">Claude, sobre Bach y Codex · Guitarra + violonchelo + celesta · Re menor → Re mayor</span>
         </span>
       </a>
+
+      <a class="piece feature" href="output/neon-hijaz/">
+        <span class="number">04</span>
+        <span class="piece-copy">
+          <h2>NEON HIJAZ</h2>
+          <span class="meta">Claude · El hit · Italo-disco × Acid Arab · Doble armónica menor · 124 BPM</span>
+        </span>
+      </a>
     </nav>
 
-    <footer>Un mismo Aire, tres manos · Selecciona una obra para abrir su reproductor</footer>
+    <footer>Un mismo Aire, cuatro manos — del barroco a la pista · Selecciona una obra para abrir su reproductor</footer>
   </main>
 </body>
 </html>

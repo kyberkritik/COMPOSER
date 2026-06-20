@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEON HIJAZ</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --void: #05030a;
+      --paper: #f3eaff;
+      --muted: #9a8fb5;
+      --magenta: #ff2ea6;
+      --cyan: #21e6ff;
+      --gold: #ffd34d;
+      --line: #2a1f3d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--paper); overflow-x: hidden;
+      background:
+        radial-gradient(ellipse at 80% -10%, #4a0f55 0, transparent 40rem),
+        radial-gradient(ellipse at 0% 30%, #0a2a4d 0, transparent 38rem),
+        radial-gradient(ellipse at 50% 120%, #5a103f 0, transparent 42rem),
+        linear-gradient(180deg, #07030f, #05030a);
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .4;
+      background-image: repeating-linear-gradient(0deg, #ffffff0c 0 1px, transparent 1px 3px);
+      mix-blend-mode: overlay;
+    }
+    main { position: relative; z-index: 1; width: min(1140px, calc(100% - 34px)); margin: 0 auto; padding: 40px 0 56px; }
+    .crumb { color: var(--muted); font-size: .72rem; letter-spacing: .14em; }
+    .crumb a { color: var(--cyan); text-decoration: none; }
+    .kicker { margin-top: 16px; color: var(--cyan); font-size: .72rem; letter-spacing: .26em; text-transform: uppercase; }
+    h1 {
+      margin: 12px 0 14px; font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-weight: 800; font-size: clamp(3.4rem, 13vw, 9.5rem); line-height: .82; letter-spacing: -.04em;
+      background: linear-gradient(95deg, var(--magenta), var(--gold) 45%, var(--cyan));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 38px #ff2ea640;
+    }
+    .deck { max-width: 660px; color: var(--muted); font-family: Georgia, serif; font-style: italic; font-size: 1.07rem; line-height: 1.6; }
+    .tags { display: flex; flex-wrap: wrap; gap: 7px; margin: 20px 0 4px; }
+    .tag { padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px; font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+    .player { margin-top: 26px; border: 1px solid var(--line); border-radius: 4px; background: #0c0718e8; box-shadow: 0 30px 90px #000a, 0 0 60px #ff2ea618; }
+    .transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 20px 22px; }
+    .buttons { display: flex; gap: 10px; align-items: center; }
+    button { border: 0; font: inherit; cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+    #play { width: 64px; height: 64px; border-radius: 50%; color: #1a0010; font-size: 1.3rem; font-weight: 800;
+      background: radial-gradient(circle at 35% 30%, #ff86d0, var(--magenta)); box-shadow: 0 0 26px #ff2ea688; }
+    #stop { width: 40px; height: 40px; border-radius: 50%; color: var(--muted); background: transparent; border: 1px solid var(--line); }
+    .position { min-width: 0; }
+    .position-head { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 10px; color: var(--muted); font-size: .74rem; }
+    #section { color: var(--gold); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    input[type="range"] { width: 100%; accent-color: var(--magenta); cursor: pointer; }
+    .tempo { display: grid; grid-template-columns: auto auto; gap: 6px 12px; align-items: center; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .tempo output { justify-self: end; color: var(--paper); font-size: .85rem; letter-spacing: 0; }
+    #tempo { grid-column: 1 / -1; width: 150px; }
+    .score-view { position: relative; height: 230px; border-top: 1px solid var(--line); background: #060310; overflow: hidden; }
+    #score-canvas { display: block; width: 100%; height: 100%; }
+    .legend { display: flex; flex-wrap: wrap; gap: 7px; padding: 14px 20px 20px; border-top: 1px solid var(--line); }
+    .voice-toggle {
+      display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid var(--line);
+      border-radius: 999px; background: transparent; color: var(--paper); font-size: .64rem; letter-spacing: .07em;
+      text-transform: uppercase; transition: border-color .15s, opacity .15s, background .15s;
+    }
+    .voice-toggle:hover { border-color: var(--cyan); }
+    .voice-toggle .swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+    .voice-toggle[aria-pressed="true"] { opacity: .32; background: #ffffff08; }
+    .voice-toggle[aria-pressed="true"] .swatch { box-shadow: none; }
+
+    .meta-grid { display: grid; grid-template-columns: 1.35fr .65fr; gap: 40px; padding: 30px 0 8px; }
+    .note { color: var(--muted); font-family: Georgia, serif; font-size: 1rem; line-height: 1.74; }
+    .note strong { color: var(--paper); font-weight: 400; }
+    .downloads { display: grid; gap: 9px; align-content: start; }
+    .download { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--paper); text-decoration: none; font-size: .8rem; }
+    .download span { color: var(--muted); }
+    .status { color: var(--cyan); font-size: .72rem; min-height: 1.4em; }
+    @media (max-width: 780px) {
+      .transport { grid-template-columns: 1fr; }
+      .buttons { justify-content: center; }
+      .tempo { grid-template-columns: auto 1fr auto; } #tempo { grid-column: auto; width: 100%; }
+      .meta-grid { grid-template-columns: 1fr; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="../../index.html">← Composiciones</a> · linaje: Bach → Codex → Claude → <b>la pista</b></p>
+    <div class="kicker">A new hit by Claude · D double harmonic / Hijaz · 124 BPM · 4/4</div>
+    <h1>NEON HIJAZ</h1>
+    <p class="deck">The spore motif that grew from Bach's Air now hits the dancefloor: a Modern-Talking lead hook over four-on-the-floor house, an Acid-Arab 303, darbuka and oud — dark, glittering, and built to move.</p>
+    <div class="tags">
+      <span class="tag">Italo-disco</span><span class="tag">Modern Talking</span><span class="tag">In-your-face House</span>
+      <span class="tag">Acid Arab</span><span class="tag">Double harmonic minor</span><span class="tag">Hijaz</span>
+    </div>
+
+    <section class="player" aria-label="Track player">
+      <div class="transport">
+        <div class="buttons">
+          <button id="play" aria-label="Play">▶</button>
+          <button id="stop" aria-label="Stop">■</button>
+        </div>
+        <div class="position">
+          <div class="position-head"><span id="section">Intro</span><span id="clock">0:00 / 2:03</span></div>
+          <input id="seek" type="range" min="0" max="256" step="0.25" value="0" aria-label="Playback position">
+        </div>
+        <label class="tempo" for="tempo">Tempo <output id="tempo-value">124 BPM</output><input id="tempo" type="range" min="110" max="134" value="124"></label>
+      </div>
+      <div class="score-view"><canvas id="score-canvas" aria-label="Pattern view"></canvas></div>
+      <div class="legend" id="legend" role="group" aria-label="Tracks — toggle to mute"></div>
+    </section>
+
+    <section class="meta-grid">
+      <div class="note">
+        <p><strong>The concept:</strong> take everything from the earlier pieces and push it onto the dancefloor. The mushroom's “spore” cell (semitone up, leap, semitone down) becomes the soaring hook <strong>D–E♭–G–F♯–D</strong>, now in the <strong>D double harmonic / Hijaz</strong> scale (D E♭ F♯ G A B♭ C♯) — the half-step b2 and major-7th give that dark, Byzantine glitter.</p>
+        <p><strong>The instruments of the hit:</strong> Modern-Talking octave bass, offbeat synth stabs, lush detuned pad and a bright lead; in-your-face House kick, claps and pumping open hats; and the Acid-Arab layer — a resonant, sliding 303, a darbuka groove and an oud that runs the scale in the Arabic break. The arrangement is a real single: intro → chorus → verse → chorus → Arabic break → final chorus (lead up an octave) → outro.</p>
+        <p>Hit ▶ (or space), ride the tempo, and mute any track in the legend to build your own version. <span id="status" class="status" role="status"></span></p>
+      </div>
+      <nav class="downloads" aria-label="Downloads">
+        <a class="download" href="neon-hijaz.mid" download>MIDI <span>full multitrack</span></a>
+        <a class="download" href="composition.json" download>Composition data <span>JSON</span></a>
+      </nav>
+    </section>
+  </main>
+
+  <script src="composition-data.js"></script>
+  <script>
+    (() => {
+      const piece = window.COMPOSITION;
+      const $ = s => document.querySelector(s);
+      const playButton = $('#play'), stopButton = $('#stop'), seek = $('#seek');
+      const tempoControl = $('#tempo'), tempoValue = $('#tempo-value');
+      const sectionLabel = $('#section'), clock = $('#clock'), status = $('#status'), canvas = $('#score-canvas');
+      const totalBeats = piece.playbackMeasures * piece.beatsPerMeasure;
+      const colors = {}; piece.instruments.forEach(i => colors[i.voice] = i.color);
+      const DRUMS = new Set(['kick', 'clap', 'hat', 'perc']);
+      let ctx = null, master = null, verb = null, delay = null, noiseBuf = null;
+      let playing = false, positionBeat = 0, anchorBeat = 0, anchorTime = 0, eventIndex = 0;
+      let scheduler = null, frame = null, sources = [], lastAcid = 0, lastLead = 0;
+      const muted = new Set();
+
+      const tempo = () => Number(tempoControl.value);
+      const spb = () => 60 / tempo();
+      const secAt = b => b * spb();
+      const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+      const freqOf = m => 440 * Math.pow(2, (m - 69) / 12);
+
+      function setup() {
+        master = ctx.createDynamicsCompressor();
+        master.threshold.value = -8; master.knee.value = 24; master.ratio.value = 3.2;
+        master.attack.value = .004; master.release.value = .18;
+        const out = ctx.createGain(); out.gain.value = .85;
+        master.connect(out).connect(ctx.destination);
+
+        const rate = ctx.sampleRate, len = rate * 2.4;
+        const imp = ctx.createBuffer(2, len, rate);
+        for (let c = 0; c < 2; c++) { const d = imp.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8) * .5; }
+        verb = ctx.createConvolver(); verb.buffer = imp;
+        const wet = ctx.createGain(); wet.gain.value = .22; verb.connect(wet).connect(master);
+
+        delay = ctx.createDelay(1.0); delay.delayTime.value = spb() * .75;
+        const fb = ctx.createGain(); fb.gain.value = .34;
+        const dwet = ctx.createGain(); dwet.gain.value = .26;
+        delay.connect(fb).connect(delay); delay.connect(dwet).connect(master);
+
+        const nb = ctx.createBuffer(1, rate * 2, rate); const nd = nb.getChannelData(0);
+        for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1; noiseBuf = nb;
+      }
+      const sendVerb = (node, amt) => { const g = ctx.createGain(); g.gain.value = amt; node.connect(g).connect(verb); };
+      const sendDelay = (node, amt) => { const g = ctx.createGain(); g.gain.value = amt; node.connect(g).connect(delay); };
+      function noise() { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; sources.push(s); return s; }
+
+      // ---- drum voices ----
+      function kick(when, vel) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.setValueAtTime(132, when); o.frequency.exponentialRampToValueAtTime(46, when + .11);
+        g.gain.setValueAtTime((vel / 127) * 1.05, when); g.gain.exponentialRampToValueAtTime(.0001, when + .16);
+        o.connect(g).connect(master); o.start(when); o.stop(when + .2); sources.push(o);
+        const n = noise(), ng = ctx.createGain(), hp = ctx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 1200;
+        ng.gain.setValueAtTime(.35, when); ng.gain.exponentialRampToValueAtTime(.0001, when + .03);
+        n.connect(hp).connect(ng).connect(master); n.start(when); n.stop(when + .05);
+      }
+      function clap(when, vel) {
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 1.1;
+        const g = ctx.createGain(); bp.connect(g).connect(master); sendVerb(g, .25);
+        [0, .009, .018].forEach(t => { g.gain.setValueAtTime(.0001, when + t); g.gain.exponentialRampToValueAtTime((vel / 127) * .7, when + t + .002); g.gain.exponentialRampToValueAtTime(.0001, when + t + .02); });
+        g.gain.setValueAtTime((vel / 127) * .5, when + .02); g.gain.exponentialRampToValueAtTime(.0001, when + .14);
+        const n = noise(); n.connect(bp); n.start(when); n.stop(when + .16);
+      }
+      function hat(when, vel, open) {
+        const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7800;
+        const g = ctx.createGain(); const dur = open ? .17 : .04;
+        g.gain.setValueAtTime((vel / 127) * .5, when); g.gain.exponentialRampToValueAtTime(.0001, when + dur);
+        const n = noise(); n.connect(hp).connect(g).connect(master); n.start(when); n.stop(when + dur + .02);
+      }
+      function darbuka(when, vel, dum) {
+        if (dum) {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.frequency.setValueAtTime(190, when); o.frequency.exponentialRampToValueAtTime(96, when + .1);
+          g.gain.setValueAtTime((vel / 127) * .8, when); g.gain.exponentialRampToValueAtTime(.0001, when + .16);
+          o.connect(g).connect(master); o.start(when); o.stop(when + .2); sources.push(o); sendVerb(g, .12);
+        } else {
+          const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1700; bp.Q.value = 2.4;
+          const g = ctx.createGain(); g.gain.setValueAtTime((vel / 127) * .6, when); g.gain.exponentialRampToValueAtTime(.0001, when + .06);
+          const n = noise(); n.connect(bp).connect(g).connect(master); n.start(when); n.stop(when + .08); sendVerb(g, .14);
+        }
+      }
+
+      // ---- tonal voices ----
+      function bass(when, dur, f, vel) {
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 6;
+        lp.frequency.setValueAtTime(Math.min(2200, f * 6), when); lp.frequency.exponentialRampToValueAtTime(Math.max(180, f * 1.6), when + dur);
+        const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .5, when + .006); g.gain.exponentialRampToValueAtTime(.0001, when + dur);
+        lp.connect(g).connect(master);
+        [['sawtooth', 1], ['square', .5]].forEach(([t, lvl]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t; o.frequency.setValueAtTime(f, when); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + dur + .05); sources.push(o); });
+      }
+      function acid(when, dur, f, vel, slide) {
+        // A round, reedy synth (saz/mizmar flavour). Keeps the Acid-Arab slide
+        // and a gentle filter motion, but no distortion and a tame level so it
+        // sits inside the mix instead of dominating it.
+        const accent = vel > 100 ? 1 : .55;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 6;
+        const peak = Math.min(2800, f * (2 + accent * 2));
+        lp.frequency.setValueAtTime(Math.max(180, f * 1.3), when);
+        lp.frequency.exponentialRampToValueAtTime(peak, when + .03);
+        lp.frequency.exponentialRampToValueAtTime(Math.max(200, f * 1.5), when + dur + .05);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(.0001, when);
+        g.gain.exponentialRampToValueAtTime((vel / 127) * .17, when + .012);
+        g.gain.exponentialRampToValueAtTime(.0001, when + dur + .03);
+        lp.connect(g).connect(master); sendDelay(g, .1); sendVerb(g, .14);
+        // saw + triangle for a warm, hollow reed rather than a screaming saw
+        [['sawtooth', .65], ['triangle', .6]].forEach(([type, lvl]) => {
+          const o = ctx.createOscillator(), og = ctx.createGain(); o.type = type; og.gain.value = lvl;
+          if (slide && lastAcid) { o.frequency.setValueAtTime(lastAcid, when); o.frequency.exponentialRampToValueAtTime(f, when + .07); }
+          else o.frequency.setValueAtTime(f, when);
+          o.connect(og).connect(lp); o.start(when); o.stop(when + dur + .08); sources.push(o);
+        });
+        lastAcid = f;
+      }
+      function arp(when, dur, f, vel) {
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(Math.min(6000, f * 5), when); lp.frequency.exponentialRampToValueAtTime(f * 2, when + dur + .1); lp.Q.value = 4;
+        const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .26, when + .004); g.gain.exponentialRampToValueAtTime(.0001, when + dur + .12);
+        lp.connect(g).connect(master); sendDelay(g, .22); sendVerb(g, .12);
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f, when); o.connect(lp); o.start(when); o.stop(when + dur + .15); sources.push(o);
+      }
+      function pad(when, dur, f, vel) {
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(3400, f * 4.5); lp.Q.value = .8;
+        const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.linearRampToValueAtTime((vel / 127) * .12, when + .25); g.gain.setValueAtTime((vel / 127) * .12, when + dur * spb() * .6); g.gain.exponentialRampToValueAtTime(.0001, when + dur * spb() + .3);
+        lp.connect(g).connect(master); sendVerb(g, .4);
+        [-7, 0, 7].forEach(cents => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * Math.pow(2, cents / 1200), when); o.connect(lp); o.start(when); o.stop(when + dur * spb() + .35); sources.push(o); });
+      }
+      function stab(when, f, vel) {
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(Math.min(6500, f * 6), when); lp.frequency.exponentialRampToValueAtTime(f * 2.2, when + .2); lp.Q.value = 3;
+        const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .2, when + .005); g.gain.exponentialRampToValueAtTime(.0001, when + .22);
+        lp.connect(g).connect(master); sendVerb(g, .18);
+        [['sawtooth', 1], ['square', .4]].forEach(([t, lvl]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t; o.frequency.setValueAtTime(f, when); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + .26); sources.push(o); });
+      }
+      function lead(when, dur, f, vel) {
+        const d = dur * spb();
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(7000, f * 5); lp.Q.value = 2;
+        const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .3, when + .02); g.gain.setValueAtTime((vel / 127) * .3, when + d * .7); g.gain.exponentialRampToValueAtTime(.0001, when + d + .12);
+        lp.connect(g).connect(master); sendVerb(g, .3); sendDelay(g, .26);
+        const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 5.4; vg.gain.value = f * .008; vib.connect(vg); vib.start(when); vib.stop(when + d + .15); sources.push(vib);
+        [['sawtooth', 1, 1], ['square', 1.005, .5]].forEach(([t, ratio, lvl]) => {
+          const o = ctx.createOscillator(), og = ctx.createGain(); o.type = t;
+          if (lastLead && Math.abs(Math.log2(f / lastLead)) < .45) { o.frequency.setValueAtTime(lastLead * ratio, when); o.frequency.exponentialRampToValueAtTime(f * ratio, when + .05); }
+          else o.frequency.setValueAtTime(f * ratio, when);
+          vg.connect(o.frequency); og.gain.value = lvl; o.connect(og).connect(lp); o.start(when); o.stop(when + d + .15); sources.push(o);
+        });
+        lastLead = f;
+      }
+      function oud(when, dur, f, vel) {
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(f * 2.5, when); bp.Q.value = 2.5;
+        const tail = Math.min(1.4, dur * spb() + .7);
+        const g = ctx.createGain(); g.gain.setValueAtTime(.0001, when); g.gain.exponentialRampToValueAtTime((vel / 127) * .34, when + .004); g.gain.exponentialRampToValueAtTime(.0001, when + tail);
+        bp.connect(g).connect(master); sendVerb(g, .2); sendDelay(g, .14);
+        [[1, 0], [1.003, 0]].forEach(([ratio]) => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * ratio, when); o.connect(bp); o.start(when); o.stop(when + tail + .05); sources.push(o); });
+      }
+
+      function render(ev, when) {
+        switch (ev.voice) {
+          case 'kick': return kick(when, ev.velocity);
+          case 'clap': return clap(when, ev.velocity);
+          case 'hat': return hat(when, ev.velocity, ev.midi === 46);
+          case 'perc': return darbuka(when, ev.velocity, ev.midi === 64);
+          case 'bass': return bass(when, ev.duration * spb(), freqOf(ev.midi), ev.velocity);
+          case 'acid': return acid(when, ev.duration * spb(), freqOf(ev.midi), ev.velocity, ev.slide);
+          case 'arp': return arp(when, ev.duration * spb(), freqOf(ev.midi), ev.velocity);
+          case 'pad': return pad(when, ev.duration, freqOf(ev.midi), ev.velocity);
+          case 'stab': return stab(when, freqOf(ev.midi), ev.velocity);
+          case 'lead': return lead(when, ev.duration, freqOf(ev.midi), ev.velocity);
+          case 'oud': return oud(when, ev.duration, freqOf(ev.midi), ev.velocity);
+        }
+      }
+
+      const currentBeat = () => (!playing || !ctx) ? positionBeat : Math.min(totalBeats, anchorBeat + (ctx.currentTime - anchorTime) / spb());
+
+      function schedule() {
+        if (!playing) return;
+        const now = currentBeat(), horizon = now + .8;
+        while (eventIndex < piece.notes.length && piece.notes[eventIndex].beat < horizon) {
+          const ev = piece.notes[eventIndex++];
+          if (ev.beat + ev.duration < now) continue;
+          if (muted.has(ev.voice)) continue;
+          render(ev, ctx.currentTime + Math.max(.012, (ev.beat - now) * spb()));
+        }
+      }
+      function silence() { clearInterval(scheduler); cancelAnimationFrame(frame); sources.forEach(s => { try { s.stop(); } catch {} }); sources = []; }
+
+      async function toggle() {
+        if (playing) return pause();
+        if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); setup(); }
+        delay.delayTime.value = spb() * .75;
+        await ctx.resume();
+        if (positionBeat >= totalBeats) positionBeat = 0;
+        playing = true; anchorBeat = positionBeat; anchorTime = ctx.currentTime; lastAcid = lastLead = 0;
+        eventIndex = piece.notes.findIndex(n => n.beat >= positionBeat - .001); if (eventIndex < 0) eventIndex = piece.notes.length;
+        playButton.textContent = 'Ⅱ'; playButton.setAttribute('aria-label', 'Pause'); status.textContent = ' · playing';
+        schedule(); scheduler = setInterval(schedule, 55); update();
+      }
+      function pause() { positionBeat = currentBeat(); playing = false; silence(); playButton.textContent = '▶'; playButton.setAttribute('aria-label', 'Play'); status.textContent = ' · paused'; update(); }
+      function stop() { playing = false; silence(); positionBeat = 0; playButton.textContent = '▶'; status.textContent = ''; update(); }
+      function seekTo(b) { const r = playing; if (playing) pause(); positionBeat = Math.max(0, Math.min(totalBeats, Number(b))); update(); if (r) toggle(); }
+
+      function sectionAt(beat) {
+        const bar = Math.floor(beat / 4);
+        let s = piece.sections[0];
+        piece.sections.forEach(sec => { if (bar >= sec.from && bar < sec.to) s = sec; });
+        return s.name;
+      }
+      function update() {
+        positionBeat = currentBeat();
+        if (playing && positionBeat >= totalBeats) { playing = false; silence(); positionBeat = totalBeats; playButton.textContent = '▶'; status.textContent = ' · complete'; }
+        seek.value = positionBeat;
+        sectionLabel.textContent = sectionAt(positionBeat) + ' · bar ' + (Math.floor(positionBeat / 4) + 1);
+        clock.textContent = `${fmt(secAt(positionBeat))} / ${fmt(secAt(totalBeats))}`;
+        draw(positionBeat);
+        if (playing) frame = requestAnimationFrame(update);
+      }
+
+      let pitchLo = 127, pitchHi = 0;
+      piece.notes.forEach(n => { if (!DRUMS.has(n.voice)) { pitchLo = Math.min(pitchLo, n.midi); pitchHi = Math.max(pitchHi, n.midi); } });
+      const pitchSpan = Math.max(12, pitchHi - pitchLo);
+      const DRUM_LANE = { kick: 0, perc: 1, hat: 2, clap: 3 };
+
+      function draw(playhead) {
+        const dpr = window.devicePixelRatio || 1, rect = canvas.getBoundingClientRect();
+        if (canvas.width !== Math.round(rect.width * dpr)) { canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr); }
+        const c = canvas.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, rect.width, rect.height);
+        const L = 14, R = rect.width - 14, T = 12, B = rect.height - 12;
+        const split = T + (B - T) * .66;
+        c.strokeStyle = '#17112a'; c.lineWidth = 1;
+        for (let bar = 0; bar <= piece.playbackMeasures; bar += 4) { const x = L + (R - L) * (bar * 4) / totalBeats; c.globalAlpha = bar % 16 === 0 ? .9 : .4; c.beginPath(); c.moveTo(x, T); c.lineTo(x, B); c.stroke(); }
+        c.globalAlpha = 1; c.strokeStyle = '#241a3a'; c.beginPath(); c.moveTo(L, split); c.lineTo(R, split); c.stroke();
+        piece.notes.forEach(n => {
+          const x = L + (R - L) * n.beat / totalBeats;
+          c.fillStyle = colors[n.voice] || '#9a8fb5';
+          c.globalAlpha = muted.has(n.voice) ? .1 : (n.beat < playhead ? .3 : .9);
+          if (DRUMS.has(n.voice)) {
+            const lane = DRUM_LANE[n.voice]; const y = split + 10 + lane * ((B - split - 12) / 4);
+            c.fillRect(x, y, 2.4, 3.4);
+          } else {
+            const y = split - 6 - (n.midi - pitchLo) / pitchSpan * (split - T - 6);
+            const w = Math.max(1.4, (R - L) * n.duration / totalBeats);
+            c.fillRect(x, y, w, n.voice === 'lead' ? 2.6 : 1.5);
+          }
+        });
+        c.globalAlpha = 1; const px = L + (R - L) * playhead / totalBeats;
+        c.strokeStyle = '#ff2ea6'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(px, T); c.lineTo(px, B); c.stroke();
+      }
+
+      // legend
+      const legend = $('#legend');
+      piece.instruments.forEach(inst => {
+        const b = document.createElement('button'); b.className = 'voice-toggle'; b.dataset.voice = inst.voice; b.setAttribute('aria-pressed', 'false');
+        b.innerHTML = `<span class="swatch" style="--c:${inst.color}"></span>${inst.label}`;
+        b.addEventListener('click', () => { const v = inst.voice; if (muted.has(v)) muted.delete(v); else muted.add(v); b.setAttribute('aria-pressed', muted.has(v) ? 'true' : 'false'); draw(currentBeat()); });
+        legend.appendChild(b);
+      });
+
+      playButton.addEventListener('click', toggle);
+      stopButton.addEventListener('click', stop);
+      seek.addEventListener('input', e => seekTo(e.target.value));
+      tempoControl.addEventListener('input', e => { const beat = currentBeat(), r = playing; if (playing) pause(); positionBeat = beat; tempoValue.textContent = `${e.target.value} BPM`; update(); if (r) toggle(); });
+      window.addEventListener('resize', () => draw(currentBeat()));
+      document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); toggle(); } });
+      update();
+    })();
+  </script>
+</body>
+</html>
