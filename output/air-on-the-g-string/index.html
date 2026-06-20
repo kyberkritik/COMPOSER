@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Air on the G String - reproductor</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f7f0df;
+      --muted: #b8ad99;
+      --paper: #15181b;
+      --panel: #1d2226;
+      --line: #333a3f;
+      --gold: #d9ad58;
+      --gold-soft: #7c6335;
+      --blue: #8eb8bc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% 8%, #273037 0, transparent 28rem),
+        linear-gradient(145deg, #101315, #181b1e 60%, #121517);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 56px 0 44px; }
+    header { display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; margin-bottom: 28px; }
+    .eyebrow { color: var(--gold); font-size: .75rem; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 8px 0 7px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.35rem, 7vw, 5.6rem); font-weight: 500; line-height: .94; letter-spacing: -.045em; }
+    .subtitle { margin: 0; color: var(--muted); font-family: Georgia, "Times New Roman", serif; font-size: 1.1rem; font-style: italic; }
+    .composer { text-align: right; color: var(--muted); line-height: 1.5; white-space: nowrap; }
+    .composer strong { display: block; color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 1.15rem; font-weight: 500; }
+    .player { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: 0 28px 80px #0007; }
+    .player-top { display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center; padding: 24px; }
+    button {
+      border: 0; color: #16130d; background: var(--gold); font: inherit; font-weight: 780; cursor: pointer;
+      transition: transform .15s ease, filter .15s ease;
+    }
+    button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid #fff9; outline-offset: 3px; }
+    #play { width: 72px; height: 72px; border-radius: 50%; font-size: 1.55rem; }
+    .transport { min-width: 0; }
+    .now { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: .82rem; margin-bottom: 11px; }
+    #position-label { color: var(--ink); font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: var(--gold); cursor: pointer; }
+    .tempo { display: grid; gap: 7px; justify-items: end; color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
+    .tempo output { color: var(--ink); font-size: 1.1rem; font-weight: 750; letter-spacing: 0; }
+    #tempo { width: 130px; }
+    .sequence { padding: 17px 24px 21px; border-top: 1px solid var(--line); background: #121619a6; }
+    .sequence-label { display: flex; justify-content: space-between; color: var(--muted); font-size: .72rem; margin-bottom: 10px; }
+    .measure-map { display: grid; grid-template-columns: repeat(72, minmax(4px, 1fr)); gap: 2px; height: 33px; align-items: end; }
+    .measure-tick { min-width: 0; height: 13px; border-radius: 2px; background: #485159; transition: height .15s, background .15s; }
+    .measure-tick.section-start { height: 23px; background: var(--gold-soft); }
+    .measure-tick.active { height: 31px; background: var(--gold); box-shadow: 0 0 18px #d9ad5870; }
+    .downloads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+    .download { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 13px; color: var(--ink); background: #181d21; text-decoration: none; }
+    .download:hover { border-color: var(--gold-soft); background: #1d2327; }
+    .download span { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
+    .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 26px; color: var(--muted); font-size: .85rem; line-height: 1.6; }
+    .notes strong { color: var(--ink); }
+    .status { min-height: 1.5em; color: var(--blue); }
+    @media (max-width: 720px) {
+      main { padding-top: 34px; }
+      header { grid-template-columns: 1fr; }
+      .composer { text-align: left; }
+      .player-top { grid-template-columns: auto 1fr; }
+      .tempo { grid-column: 1 / -1; grid-template-columns: auto 1fr auto; align-items: center; justify-items: start; width: 100%; }
+      #tempo { width: 100%; }
+      .downloads, .notes { grid-template-columns: 1fr; }
+      .measure-map { gap: 1px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="eyebrow">Guitarra clásica · BWV 1068</div>
+        <h1>Air on the<br>G String</h1>
+        <p class="subtitle">From Orchestral Suite No. 3</p>
+      </div>
+      <div class="composer"><strong>Johann Sebastian Bach</strong>1685-1750<br>Arreglo: Allen W. Mathews</div>
+    </header>
+
+    <section class="player" aria-label="Reproductor de la partitura">
+      <div class="player-top">
+        <button id="play" aria-label="Reproducir">▶</button>
+        <div class="transport">
+          <div class="now"><span id="position-label">Compás 1</span><span id="time-label">0:00 / 4:00</span></div>
+          <input id="seek" type="range" min="0" max="288" step="0.125" value="0" aria-label="Posición">
+        </div>
+        <label class="tempo" for="tempo">Tempo <output id="tempo-value">72 BPM</output><input id="tempo" type="range" min="48" max="96" step="1" value="72"></label>
+      </div>
+      <div class="sequence">
+        <div class="sequence-label"><span>Secuencia interpretada</span><span>37 compases escritos · 72 con repeticiones</span></div>
+        <div id="measure-map" class="measure-map" aria-label="Mapa de compases"></div>
+      </div>
+    </section>
+
+    <nav class="downloads" aria-label="Archivos">
+      <a class="download" href="air-on-the-g-string.mid" download><strong>MIDI</strong><span>Reproducible</span></a>
+      <a class="download" href="air-on-the-g-string.musicxml" download><strong>MusicXML</strong><span>Editable</span></a>
+      <a class="download" href="partitura-original.pdf"><strong>Partitura original</strong><span>PDF</span></a>
+    </nav>
+
+    <div class="notes">
+      <p><strong>Interpretación:</strong> sonido sintetizado de guitarra de nylon, 4/4, Andante a 72 BPM. El MIDI desarrolla las repeticiones y las dos casillas.</p>
+      <p><strong>Controles:</strong> barra espaciadora para reproducir o pausar. Puedes cambiar el tempo o mover la posición en cualquier momento.</p>
+    </div>
+    <p id="status" class="status" role="status"></p>
+  </main>
+
+  <script src="score-data.js"></script>
+  <script>
+    (() => {
+      const score = window.SCORE_DATA;
+      const playButton = document.querySelector('#play');
+      const seek = document.querySelector('#seek');
+      const tempoSlider = document.querySelector('#tempo');
+      const tempoValue = document.querySelector('#tempo-value');
+      const positionLabel = document.querySelector('#position-label');
+      const timeLabel = document.querySelector('#time-label');
+      const status = document.querySelector('#status');
+      const map = document.querySelector('#measure-map');
+      const totalBeats = score.playbackMeasures * score.beatsPerMeasure;
+      const sectionStarts = new Set([0, 12, 23, 24, 48]);
+      let audioContext = null;
+      let playing = false;
+      let positionBeat = 0;
+      let baseBeat = 0;
+      let baseContextTime = 0;
+      let nextEvent = 0;
+      let timer = null;
+      let animation = null;
+      let activeNodes = [];
+
+      score.order.forEach((measure, index) => {
+        const tick = document.createElement('span');
+        tick.className = 'measure-tick' + (sectionStarts.has(index) ? ' section-start' : '');
+        tick.title = `Compás escrito ${measure}`;
+        map.appendChild(tick);
+      });
+      const ticks = [...map.children];
+
+      const tempo = () => Number(tempoSlider.value);
+      const beatToSeconds = beat => beat * 60 / tempo();
+      const formatTime = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+
+      function currentBeat() {
+        if (!playing || !audioContext) return positionBeat;
+        return Math.min(totalBeats, baseBeat + (audioContext.currentTime - baseContextTime) * tempo() / 60);
+      }
+
+      function updateUI() {
+        positionBeat = currentBeat();
+        seek.value = positionBeat;
+        const playIndex = Math.min(score.order.length - 1, Math.floor(positionBeat / 4));
+        const writtenMeasure = score.order[playIndex];
+        positionLabel.textContent = `Compás ${writtenMeasure} · paso ${playIndex + 1} de ${score.order.length}`;
+        timeLabel.textContent = `${formatTime(beatToSeconds(positionBeat))} / ${formatTime(beatToSeconds(totalBeats))}`;
+        ticks.forEach((tick, index) => tick.classList.toggle('active', index === playIndex));
+        if (playing && positionBeat >= totalBeats) stop(true);
+        if (playing) animation = requestAnimationFrame(updateUI);
+      }
+
+      function pluck(midi, when, duration, chordSize) {
+        const frequency = 440 * Math.pow(2, (midi - 69) / 12);
+        const master = audioContext.createGain();
+        const tone = audioContext.createBiquadFilter();
+        tone.type = 'lowpass';
+        tone.frequency.setValueAtTime(Math.min(5200, frequency * 8), when);
+        tone.Q.value = .6;
+        master.gain.setValueAtTime(.0001, when);
+        master.gain.exponentialRampToValueAtTime(.16 / Math.sqrt(chordSize), when + .012);
+        master.gain.exponentialRampToValueAtTime(.0001, when + Math.min(2.8, Math.max(.7, duration + 1.25)));
+        tone.connect(master).connect(audioContext.destination);
+        const partials = [[1, 'triangle', 1], [2.01, 'sine', .18], [3.98, 'sine', .06]];
+        partials.forEach(([ratio, type, level]) => {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(frequency * ratio, when);
+          gain.gain.value = level;
+          osc.connect(gain).connect(tone);
+          osc.start(when);
+          osc.stop(when + Math.min(3, Math.max(.8, duration + 1.35)));
+          activeNodes.push(osc);
+        });
+      }
+
+      function schedule() {
+        if (!playing) return;
+        const nowBeat = currentBeat();
+        const horizon = nowBeat + tempo() / 60 * .45;
+        while (nextEvent < score.events.length && score.events[nextEvent].beat < horizon) {
+          const event = score.events[nextEvent++];
+          if (event.beat + event.duration < nowBeat) continue;
+          const when = audioContext.currentTime + Math.max(.01, (event.beat - nowBeat) * 60 / tempo());
+          const duration = event.duration * 60 / tempo();
+          event.notes.forEach(note => pluck(note, when, duration, event.notes.length));
+        }
+        activeNodes = activeNodes.filter(node => {
+          try { return node.context === audioContext; } catch { return false; }
+        });
+      }
+
+      function silence() {
+        activeNodes.forEach(node => { try { node.stop(); } catch {} });
+        activeNodes = [];
+        clearInterval(timer);
+        cancelAnimationFrame(animation);
+      }
+
+      async function play() {
+        if (playing) return pause();
+        audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+        await audioContext.resume();
+        if (positionBeat >= totalBeats) positionBeat = 0;
+        playing = true;
+        baseBeat = positionBeat;
+        baseContextTime = audioContext.currentTime;
+        nextEvent = score.events.findIndex(event => event.beat >= positionBeat - .001);
+        if (nextEvent < 0) nextEvent = score.events.length;
+        playButton.textContent = 'Ⅱ';
+        playButton.setAttribute('aria-label', 'Pausar');
+        status.textContent = 'Reproduciendo';
+        schedule();
+        timer = setInterval(schedule, 120);
+        updateUI();
+      }
+
+      function pause() {
+        positionBeat = currentBeat();
+        playing = false;
+        silence();
+        playButton.textContent = '▶';
+        playButton.setAttribute('aria-label', 'Reproducir');
+        status.textContent = 'En pausa';
+        updateUI();
+      }
+
+      function stop(finished = false) {
+        playing = false;
+        silence();
+        positionBeat = finished ? totalBeats : 0;
+        playButton.textContent = '▶';
+        playButton.setAttribute('aria-label', 'Reproducir');
+        status.textContent = finished ? 'Fin de la pieza' : '';
+        updateUI();
+      }
+
+      function restartFrom(beat) {
+        const wasPlaying = playing;
+        if (playing) pause();
+        positionBeat = Math.max(0, Math.min(totalBeats, Number(beat)));
+        updateUI();
+        if (wasPlaying) play();
+      }
+
+      playButton.addEventListener('click', play);
+      seek.addEventListener('input', event => restartFrom(event.target.value));
+      tempoSlider.addEventListener('input', event => {
+        const beat = currentBeat();
+        const wasPlaying = playing;
+        if (playing) pause();
+        positionBeat = beat;
+        tempoValue.textContent = `${event.target.value} BPM`;
+        updateUI();
+        if (wasPlaying) play();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.code === 'Space' && event.target.tagName !== 'INPUT') {
+          event.preventDefault();
+          play();
+        }
+      });
+      updateUI();
+    })();
+  </script>
+</body>
+</html>

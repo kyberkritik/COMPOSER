@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Mushroom at the End of the World</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --void: #090b09;
+      --soil: #12130f;
+      --paper: #e9e2ca;
+      --muted: #a39e89;
+      --acid: #b8ff80;
+      --spore: #e8c87a;
+      --rust: #a35d38;
+      --line: #30342a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--paper);
+      background:
+        radial-gradient(ellipse at 75% -10%, #304125 0, transparent 34rem),
+        radial-gradient(ellipse at 8% 70%, #282216 0, transparent 33rem),
+        linear-gradient(150deg, var(--void), #10130f 55%, #080a08);
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .23;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+    main { position: relative; width: min(1120px, calc(100% - 34px)); margin: 0 auto; padding: 42px 0 50px; }
+    .masthead { display: grid; grid-template-columns: minmax(0, 1fr) 310px; min-height: 385px; border-bottom: 1px solid var(--line); }
+    .kicker { color: var(--acid); font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; }
+    h1 {
+      max-width: 780px;
+      margin: 22px 0 18px;
+      font-family: Iowan Old Style, Baskerville, Georgia, serif;
+      font-size: clamp(3.2rem, 8.5vw, 7.5rem);
+      font-weight: 400;
+      line-height: .83;
+      letter-spacing: -.065em;
+    }
+    .deck { width: min(600px, 100%); color: var(--muted); font-family: Georgia, serif; font-size: 1.08rem; font-style: italic; line-height: 1.55; }
+    .organism { position: relative; align-self: stretch; min-height: 330px; filter: drop-shadow(0 24px 44px #000); }
+    .cap {
+      position: absolute; z-index: 2; top: 42px; left: 21px; width: 265px; height: 139px;
+      border-radius: 54% 48% 42% 46% / 78% 72% 28% 26%;
+      background:
+        radial-gradient(circle at 28% 28%, #e7bb72 0 2px, transparent 3px),
+        radial-gradient(circle at 67% 42%, #e7bb72 0 3px, transparent 4px),
+        radial-gradient(circle at 48% 18%, #e7bb72 0 1px, transparent 2px),
+        radial-gradient(ellipse at 44% 85%, #d6b878 0, #7c472d 35%, #402318 66%, #17130e 100%);
+      transform: rotate(-4deg);
+      box-shadow: inset 0 -20px 30px #140c09aa, inset 8px 12px 22px #e2c38038;
+    }
+    .gills {
+      position: absolute; z-index: 1; top: 147px; left: 65px; width: 190px; height: 48px;
+      border-radius: 0 0 50% 50%; transform: rotate(-4deg);
+      background: repeating-radial-gradient(ellipse at 50% -80%, #d8cca4 0 2px, #5c4a35 3px 6px);
+      opacity: .8;
+    }
+    .stem {
+      position: absolute; top: 150px; left: 131px; width: 75px; height: 168px;
+      border-radius: 31% 38% 45% 42% / 10% 12% 80% 70%; transform: rotate(5deg);
+      background: linear-gradient(90deg, #64583d, #d5c89f 38%, #8f815d 78%, #4f4934);
+      box-shadow: inset 8px 0 17px #fff2b71d;
+    }
+    .mycelium { position: absolute; left: 21px; right: 10px; bottom: 28px; height: 72px; border-bottom: 1px solid #8aa77566; }
+    .mycelium::before, .mycelium::after {
+      content: ""; position: absolute; left: 70px; bottom: -1px; width: 215px; height: 60px;
+      border: solid #879f7155; border-width: 0 0 1px 1px; border-radius: 0 0 0 100%; transform: rotate(8deg);
+    }
+    .mycelium::after { left: 5px; width: 170px; transform: scaleX(-1) rotate(15deg); }
+    .spore { position: absolute; z-index: 3; width: 4px; height: 4px; border-radius: 50%; background: var(--spore); box-shadow: 0 0 10px var(--spore); animation: float 5s infinite ease-in-out; }
+    .s1 { left: 55px; top: 95px; } .s2 { left: 270px; top: 80px; animation-delay: -1.4s; }
+    .s3 { left: 241px; top: 187px; animation-delay: -2.2s; } .s4 { left: 80px; top: 210px; animation-delay: -3.1s; }
+    .s5 { left: 295px; top: 240px; animation-delay: -4.2s; }
+    @keyframes float { 50% { transform: translate(9px, -22px) scale(.55); opacity: .35; } }
+    .player { margin-top: 27px; border: 1px solid var(--line); background: #10130fed; box-shadow: 0 30px 80px #0008; }
+    .transport { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 22px; }
+    .buttons { display: flex; gap: 9px; }
+    button { border: 0; font: inherit; cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--acid); outline-offset: 3px; }
+    #play { width: 62px; height: 62px; border-radius: 50%; color: #0a0d08; background: var(--acid); font-size: 1.25rem; font-weight: 800; }
+    #stop { width: 39px; height: 39px; align-self: center; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); background: transparent; }
+    .position { min-width: 0; }
+    .position-head { display: flex; justify-content: space-between; gap: 18px; margin-bottom: 11px; color: var(--muted); font-size: .75rem; }
+    #measure { color: var(--paper); }
+    input[type="range"] { width: 100%; accent-color: var(--acid); cursor: pointer; }
+    .tempo { display: grid; grid-template-columns: auto auto; gap: 6px 13px; align-items: center; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .tempo output { justify-self: end; color: var(--paper); font-size: .85rem; letter-spacing: 0; }
+    #tempo { grid-column: 1 / -1; width: 140px; }
+    .score-view { position: relative; height: 180px; border-top: 1px solid var(--line); background: #090b09; overflow: hidden; }
+    #score-canvas { display: block; width: 100%; height: 100%; }
+    .section-tag { position: absolute; top: 14px; left: 17px; padding: 5px 8px; color: #0c0e0b; background: var(--acid); font-size: .66rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .meta-grid { display: grid; grid-template-columns: 1.3fr .7fr; gap: 42px; padding: 29px 0 10px; }
+    .program-note { color: var(--muted); font-family: Georgia, serif; font-size: 1rem; line-height: 1.7; }
+    .program-note strong { color: var(--paper); font-weight: 400; }
+    .downloads { display: grid; gap: 9px; align-content: start; }
+    .download { display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--line); color: var(--paper); text-decoration: none; font-size: .8rem; }
+    .download span { color: var(--muted); }
+    .status { color: var(--acid); font-size: .72rem; min-height: 1.4em; }
+    @media (max-width: 760px) {
+      main { padding-top: 26px; }
+      .masthead { grid-template-columns: 1fr; }
+      .organism { min-height: 330px; width: 310px; max-width: 100%; margin: 0 auto; }
+      .transport { grid-template-columns: 1fr; }
+      .buttons { justify-content: center; }
+      .tempo { grid-template-columns: auto 1fr auto; }
+      #tempo { grid-column: auto; width: 100%; }
+      .meta-grid { grid-template-columns: 1fr; gap: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <div>
+        <div class="kicker">An original work for classical guitar · C minor · 4/4</div>
+        <h1>The Mushroom at the End of the World</h1>
+        <p class="deck">A baroque elegy in which a small chromatic organism survives the collapse of its harmony, fruits among the ruins, and ends in an altered light.</p>
+      </div>
+      <div class="organism" aria-hidden="true">
+        <div class="cap"></div><div class="gills"></div><div class="stem"></div><div class="mycelium"></div>
+        <i class="spore s1"></i><i class="spore s2"></i><i class="spore s3"></i><i class="spore s4"></i><i class="spore s5"></i>
+      </div>
+    </header>
+
+    <section class="player" aria-label="Composition player">
+      <div class="transport">
+        <div class="buttons">
+          <button id="play" aria-label="Play">▶</button>
+          <button id="stop" aria-label="Stop">■</button>
+        </div>
+        <div class="position">
+          <div class="position-head"><span id="measure">Measure 1 · Spores</span><span id="clock">0:00 / 2:55</span></div>
+          <input id="seek" type="range" min="0" max="192" step="0.125" value="0" aria-label="Playback position">
+        </div>
+        <label class="tempo" for="tempo">Tempo <output id="tempo-value">66 BPM</output><input id="tempo" type="range" min="48" max="92" value="66"></label>
+      </div>
+      <div class="score-view">
+        <span id="section-tag" class="section-tag">I · Spores</span>
+        <canvas id="score-canvas" aria-label="Pitch map of the composition"></canvas>
+      </div>
+    </section>
+
+    <section class="meta-grid">
+      <div class="program-note">
+        <p><strong>The musical material:</strong> a five-note “spore” cell rises G–A♭–C–B–G, then propagates through inversion and sequence. The texture borrows the Air’s sustained upper voice, moving bass, suspensions, ornamented cadences and binary repeats, without quoting its melody.</p>
+        <p>The second half descends through ruined harmonies before the final C-minor field changes to C major: not triumph, but adaptation. <span id="status" class="status" role="status"></span></p>
+      </div>
+      <nav class="downloads" aria-label="Downloads">
+        <a class="download" href="the-mushroom-at-the-end-of-the-world.mid" download>MIDI <span>performance</span></a>
+        <a class="download" href="the-mushroom-at-the-end-of-the-world.musicxml" download>MusicXML <span>editable score</span></a>
+        <a class="download" href="composition.json" download>Composition data <span>JSON</span></a>
+      </nav>
+    </section>
+  </main>
+
+  <script src="composition-data.js"></script>
+  <script>
+    (() => {
+      const piece = window.COMPOSITION;
+      const playButton = document.querySelector('#play');
+      const stopButton = document.querySelector('#stop');
+      const seek = document.querySelector('#seek');
+      const tempoControl = document.querySelector('#tempo');
+      const tempoValue = document.querySelector('#tempo-value');
+      const measureLabel = document.querySelector('#measure');
+      const clock = document.querySelector('#clock');
+      const status = document.querySelector('#status');
+      const sectionTag = document.querySelector('#section-tag');
+      const canvas = document.querySelector('#score-canvas');
+      const totalBeats = piece.playbackMeasures * piece.beatsPerMeasure;
+      let context = null;
+      let convolver = null;
+      let playing = false;
+      let positionBeat = 0;
+      let anchorBeat = 0;
+      let anchorTime = 0;
+      let eventIndex = 0;
+      let scheduler = null;
+      let frame = null;
+      let sources = [];
+
+      const tempo = () => Number(tempoControl.value);
+      const secondsAt = beat => beat * 60 / tempo();
+      const format = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+
+      function makeRoom() {
+        const rate = context.sampleRate;
+        const length = rate * 2.2;
+        const impulse = context.createBuffer(2, length, rate);
+        for (let channel = 0; channel < 2; channel++) {
+          const data = impulse.getChannelData(channel);
+          for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3.8) * .28;
+        }
+        convolver = context.createConvolver();
+        convolver.buffer = impulse;
+        const wet = context.createGain();
+        wet.gain.value = .17;
+        convolver.connect(wet).connect(context.destination);
+      }
+
+      function currentBeat() {
+        if (!playing || !context) return positionBeat;
+        return Math.min(totalBeats, anchorBeat + (context.currentTime - anchorTime) * tempo() / 60);
+      }
+
+      function pluck(event, when) {
+        const frequency = 440 * Math.pow(2, (event.midi - 69) / 12);
+        const envelope = context.createGain();
+        const filter = context.createBiquadFilter();
+        const level = (event.velocity / 127) * .17;
+        const tail = Math.min(3.1, Math.max(.7, event.duration * 60 / tempo() + 1.1));
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(Math.min(5600, frequency * 9), when);
+        filter.frequency.exponentialRampToValueAtTime(Math.max(650, frequency * 2.2), when + tail);
+        envelope.gain.setValueAtTime(.0001, when);
+        envelope.gain.exponentialRampToValueAtTime(level, when + .009);
+        envelope.gain.exponentialRampToValueAtTime(.0001, when + tail);
+        filter.connect(envelope);
+        envelope.connect(context.destination);
+        envelope.connect(convolver);
+        [[1, 'triangle', 1], [2.005, 'sine', .16], [3.01, 'sine', .045]].forEach(([ratio, type, gainValue]) => {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          oscillator.type = type;
+          oscillator.frequency.setValueAtTime(frequency * ratio, when);
+          gain.gain.value = gainValue;
+          oscillator.connect(gain).connect(filter);
+          oscillator.start(when);
+          oscillator.stop(when + tail + .05);
+          sources.push(oscillator);
+        });
+      }
+
+      function schedule() {
+        if (!playing) return;
+        const now = currentBeat();
+        const horizon = now + tempo() / 60 * .5;
+        while (eventIndex < piece.notes.length && piece.notes[eventIndex].beat < horizon) {
+          const event = piece.notes[eventIndex++];
+          if (event.beat + event.duration < now) continue;
+          const when = context.currentTime + Math.max(.01, (event.beat - now) * 60 / tempo());
+          pluck(event, when);
+        }
+      }
+
+      function silence() {
+        clearInterval(scheduler);
+        cancelAnimationFrame(frame);
+        sources.forEach(source => { try { source.stop(); } catch {} });
+        sources = [];
+      }
+
+      async function togglePlay() {
+        if (playing) return pause();
+        context ||= new (window.AudioContext || window.webkitAudioContext)();
+        if (!convolver) makeRoom();
+        await context.resume();
+        if (positionBeat >= totalBeats) positionBeat = 0;
+        playing = true;
+        anchorBeat = positionBeat;
+        anchorTime = context.currentTime;
+        eventIndex = piece.notes.findIndex(note => note.beat >= positionBeat - .001);
+        if (eventIndex < 0) eventIndex = piece.notes.length;
+        playButton.textContent = 'Ⅱ';
+        playButton.setAttribute('aria-label', 'Pause');
+        status.textContent = ' · playing';
+        schedule();
+        scheduler = setInterval(schedule, 120);
+        update();
+      }
+
+      function pause() {
+        positionBeat = currentBeat();
+        playing = false;
+        silence();
+        playButton.textContent = '▶';
+        playButton.setAttribute('aria-label', 'Play');
+        status.textContent = ' · paused';
+        update();
+      }
+
+      function stop() {
+        playing = false;
+        silence();
+        positionBeat = 0;
+        playButton.textContent = '▶';
+        playButton.setAttribute('aria-label', 'Play');
+        status.textContent = '';
+        update();
+      }
+
+      function seekTo(beat) {
+        const resume = playing;
+        if (playing) pause();
+        positionBeat = Math.max(0, Math.min(totalBeats, Number(beat)));
+        update();
+        if (resume) togglePlay();
+      }
+
+      function activeSection(playIndex) {
+        return playIndex < 16 ? 'I · Spores' : 'II · Ruins / Fruiting';
+      }
+
+      function update() {
+        positionBeat = currentBeat();
+        if (playing && positionBeat >= totalBeats) {
+          playing = false;
+          silence();
+          positionBeat = totalBeats;
+          playButton.textContent = '▶';
+          status.textContent = ' · complete';
+        }
+        seek.value = positionBeat;
+        const playIndex = Math.min(piece.order.length - 1, Math.floor(positionBeat / 4));
+        const written = piece.order[playIndex];
+        const section = activeSection(playIndex);
+        measureLabel.textContent = `Measure ${written} · pass ${playIndex + 1}/${piece.order.length}`;
+        sectionTag.textContent = section;
+        clock.textContent = `${format(secondsAt(positionBeat))} / ${format(secondsAt(totalBeats))}`;
+        draw(positionBeat);
+        if (playing) frame = requestAnimationFrame(update);
+      }
+
+      function draw(playhead) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+          canvas.width = Math.round(rect.width * dpr);
+          canvas.height = Math.round(rect.height * dpr);
+        }
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        const left = 18, right = rect.width - 18, top = 22, bottom = rect.height - 17;
+        ctx.strokeStyle = '#272c24'; ctx.lineWidth = 1;
+        for (let i = 0; i <= 48; i++) {
+          const x = left + (right - left) * i / 48;
+          ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+        }
+        piece.notes.forEach(note => {
+          const x = left + (right - left) * note.beat / totalBeats;
+          const width = Math.max(1.5, (right - left) * note.duration / totalBeats);
+          const y = bottom - (note.midi - 39) / 40 * (bottom - top);
+          ctx.fillStyle = note.voice === 'melody' ? '#b8ff80' : note.voice === 'bass' ? '#a35d38' : '#827d66';
+          ctx.globalAlpha = note.beat < playhead ? .28 : .82;
+          ctx.fillRect(x, y, width, note.voice === 'melody' ? 2.2 : 1.3);
+        });
+        ctx.globalAlpha = 1;
+        const playX = left + (right - left) * playhead / totalBeats;
+        ctx.strokeStyle = '#e8c87a'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(playX, top); ctx.lineTo(playX, bottom); ctx.stroke();
+      }
+
+      playButton.addEventListener('click', togglePlay);
+      stopButton.addEventListener('click', stop);
+      seek.addEventListener('input', event => seekTo(event.target.value));
+      tempoControl.addEventListener('input', event => {
+        const beat = currentBeat();
+        const resume = playing;
+        if (playing) pause();
+        positionBeat = beat;
+        tempoValue.textContent = `${event.target.value} BPM`;
+        update();
+        if (resume) togglePlay();
+      });
+      window.addEventListener('resize', () => draw(currentBeat()));
+      document.addEventListener('keydown', event => {
+        if (event.code === 'Space' && event.target.tagName !== 'INPUT') {
+          event.preventDefault(); togglePlay();
+        }
+      });
+      update();
+    })();
+  </script>
+</body>
+</html>
