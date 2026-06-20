@@ -84,6 +84,18 @@
         rgba(17, 18, 15, .82);
       box-shadow: 0 0 40px #ff2ea61f inset;
     }
+    .piece.wire {
+      grid-column: 1 / -1;
+      min-height: 190px;
+      border-color: #58b0c844;
+      background:
+        linear-gradient(90deg, #58b0c80f 1px, transparent 1px) 0 0 / 40px 100%,
+        radial-gradient(ellipse at 70% 130%, #12223066 0, transparent 20rem),
+        rgba(17, 18, 15, .82);
+    }
+    .piece.wire::after { color: #58b0c8; }
+    .piece.wire h2 { color: #eef3f8; }
+
     .piece.feature::after { color: #ff2ea6; }
     .piece.feature h2 {
       background: linear-gradient(95deg, #ff2ea6, #ffd34d 50%, #21e6ff);
@@ -148,7 +160,7 @@
 </head>
 <body>
   <main>
-    <div class="eyebrow">Archivo sonoro · 04 obras · un linaje</div>
+    <div class="eyebrow">Archivo sonoro · 05 obras · un linaje</div>
     <h1>Composiciones</h1>
 
     <nav class="grid" aria-label="Seleccionar composición">
@@ -181,6 +193,14 @@
         <span class="piece-copy">
           <h2>NEON HIJAZ</h2>
           <span class="meta">Claude · El hit · Italo-disco × Acid Arab · Doble armónica menor · 124 BPM</span>
+        </span>
+      </a>
+
+      <a class="piece wire" href="output/welt-am-draht/">
+        <span class="number">05</span>
+        <span class="piece-copy">
+          <h2>Welt am Draht</h2>
+          <span class="meta">Claude · Camel × Joy Division · Re menor / dórico · con voces · 104 BPM</span>
         </span>
       </a>
     </nav>
